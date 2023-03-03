@@ -1,0 +1,38 @@
+<launch>
+  <arg name="laser_model"               default="sick-571"/>
+  <arg name="public_sim"                default="false"/>
+  <arg name="base_type"                 default="pmb2"/>
+  <arg name="planner"                   default="base"/>
+  <arg name="global_planner"            default="global_planner"/>
+  <arg name="local_planner"             default="$(eval 'teb' if (arg('public_sim') or arg('base_type')=='omni_base') else 'pal')"/>
+  <arg name="mapping"                   default="$(eval 'gmapping' if arg('public_sim') else 'karto')"/>
+  <arg name="rgbd_sensors"              default="false"/>
+
+
+  <!-- launching navigation -->
+  <include file="$(find tiago_2dnav_gazebo)/launch/navigation.launch">
+    <arg name="state"                   value="mapping"/>
+    <arg name="mapping"                 value="$(arg mapping)"/>
+    <arg name="planner"                 value="$(arg planner)"/>
+    <arg name="global_planner"          value="$(arg global_planner)"/>
+    <arg name="local_planner"           value="$(arg local_planner)"/>
+    <arg name="public_sim"              value="$(arg public_sim)"/>
+    <arg name="rgbd_sensors"            value="$(arg rgbd_sensors)"/>
+    <arg name="laser_model"             value="$(arg laser_model)"/>
+    <arg name="base_type"               value="$(arg base_type)"/>
+  </include>
+
+
+  <!-- launching rviz -->
+  <node name="rviz" pkg="rviz" type="rviz"
+          args="-d $(find hrsi_mapping)/config/rviz/mapping.rviz"/>
+
+
+  <!-- pointcloud to laserscan-->
+  <group if="$(arg public_sim)">
+    <include file="$(find tiago_laser_sensors)/launch/rgbd_cloud_laser.launch">
+      <arg name="cloud"                 value="/xtion/depth_registered/points"/>
+    </include>
+  </group>
+
+</launch>
