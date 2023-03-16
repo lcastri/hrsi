@@ -3,7 +3,7 @@
 from trajectory_msgs.msg import JointTrajectory
 from control_msgs.msg import JointTrajectoryControllerState
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float32, String
+from std_msgs.msg import String
 import utils
 import rospy
 from constants import *
@@ -29,8 +29,9 @@ class ActionController():
         self.pub_torso_action = rospy.Publisher('/torso_controller/command', JointTrajectory, queue_size = 10)
         self.sub_torso_state = rospy.Subscriber('/torso_controller/state', JointTrajectoryControllerState, self.cb_torso_state)
         
-        # Base subscribers & publishers
-        self.pub_base_action = rospy.Publisher('/mobile_base_controller/cmd_vel', Twist, queue_size = 10)
+        # Base subscriber & publisher
+        self.pub_cmd_vel = rospy.Publisher('/mobile_base_controller/cmd_vel', Twist, queue_size = 10)
+        self.sub_tmp_cmd_vel = rospy.Subscriber('/mobile_base_controller/tmp_cmd_vel', Twist, self.cb_vel)
         
         # Action subscriber
         self.sub_key_action = rospy.Subscriber("/key_action", String, self.cb_action_listener)
@@ -61,6 +62,12 @@ class ActionController():
             while abs(self.torso_pos - J_TORSO_TARGETUP) > 0.05: 
                 rospy.sleep(0.1)
             self.pub_torso_action.publish(TA.create_torso_msg(torso_movements.DOWN))
+            
+        # elif key_action.data == 'd':
+        #     self.pub_torso_action.publish(TA.create_torso_msg(torso_movements.UP))
+        #     while abs(self.torso_pos - J_TORSO_TARGETUP) > 0.05: 
+        #         rospy.sleep(0.1)
+        #     self.pub_torso_action.publish(TA.create_torso_msg(torso_movements.DOWN))
         
         
     def cb_head_state(self, msg):
@@ -80,8 +87,26 @@ class ActionController():
         self.torso_pos = msg.actual.positions[0]
 
     
-# def publish_base_command():
-#     base_cmd = Twist()
+    def cb_vel(self, msg : Twist):
+        """
+        Callback of the Subscriber "sub_tmp_cmd_vel".
+        Scales the velocity read from /tmp_cmd_vel and publish the new velocity to /mobile_base_controller/cmd_vel
+        
+        Args:
+            msg (Twist): Twist msg from topic /mobile_base_controller/tmp_cmd_vel
+        """
+        
+        # scale the velocity
+        new_msg = Twist()
+        new_msg.linear.x = msg.linear.x - msg.linear.x * SCALAR_FACTOR
+        new_msg.linear.y = msg.linear.y - msg.linear.y * SCALAR_FACTOR
+        new_msg.linear.z = msg.linear.z - msg.linear.z * SCALAR_FACTOR
+        new_msg.angular.x = msg.angular.x - msg.angular.x * SCALAR_FACTOR
+        new_msg.angular.y = msg.angular.y - msg.angular.y * SCALAR_FACTOR
+        new_msg.angular.z = msg.angular.z - msg.angular.z * SCALAR_FACTOR
+        
+        # publish new vel
+        self.pub_cmd_vel.publish(new_msg)
     
 
 if __name__ == '__main__':    
