@@ -4,7 +4,7 @@
     <arg name="config_topics"    default="$(find twist_mux)/config/twist_mux_topics.yaml" />
 
     <!-- Killing twist_mux and twist_marker  -->
-    <node name="killer" pkg="tiago_action_managers" type="killer.sh" />
+    <node name="killer" pkg="tiago_action_manager" type="killer.sh" />
 
     <!-- Relaunching twist_mux and twist_marker  -->
     <node name="twist_mux" pkg="twist_mux" type="twist_mux" output="screen" launch-prefix="bash -c 'sleep 10; $0 $@' ">
@@ -19,6 +19,6 @@
     </node>
 
     <!-- Launching action_manager node  -->
-    <node name="tiago_action_manager" pkg="tiago_action_manager" type="action_manager.py" />
+    <node name="tiago_action_manager" pkg="tiago_action_manager" type="action_manager.py" launch-prefix="bash -c 'sleep 10; $0 $@' "/>
 
 </launch>

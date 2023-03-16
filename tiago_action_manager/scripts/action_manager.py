@@ -4,7 +4,6 @@ from trajectory_msgs.msg import JointTrajectory
 from control_msgs.msg import JointTrajectoryControllerState
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
-import utils
 import rospy
 from constants import *
 import head_action as HA
@@ -112,10 +111,7 @@ class ActionController():
     
 
 if __name__ == '__main__':    
-    
-    # Print node info
-    utils.print_node_info()
-    
+        
     # Init node
     rospy.init_node(NODE_NAME)
     

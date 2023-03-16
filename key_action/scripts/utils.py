@@ -17,6 +17,8 @@ def print_instruction():
             a - Head left and right 
             b - Head up and down
             c - Torso up and down
+            + - Increase the velocity by 10% 
+            - - Decrease the velocity by 10%
         ---------------------------
 
         Press q to quit.
