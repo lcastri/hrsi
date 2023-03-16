@@ -357,4 +357,3 @@ MigrationBackup/
 *.pkl
 *.json
 *.jar
-*.sh
