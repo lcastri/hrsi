@@ -111,6 +111,7 @@ class ActionController():
         Args:
             key_action (String): data field containing the key 
         """
+        print("Action:", key_action.data)
         if key_action.data == 'a':
             self.pub_head_action.publish(create_head_msg(head_movements.LEFT))
             while abs(self.head_1_pos - J_HEAD_1_TARGETLEFT) > 0.05: 
