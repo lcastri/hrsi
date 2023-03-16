@@ -129,11 +129,11 @@ class ActionController():
                 rospy.sleep(0.1)
             self.pub_torso_action.publish(create_torso_msg(torso_movements.DOWN))
             
-        elif key_action.data == '+':
+        elif key_action.data == 'd':
             SCALING_FACTOR = SCALING_FACTOR + 0.1
             print("Velocity scaling factor:", SCALING_FACTOR)
         
-        elif key_action.data == '-':
+        elif key_action.data == 'e':
             SCALING_FACTOR = SCALING_FACTOR - 0.1
             print("Velocity scaling factor:", SCALING_FACTOR)
         
