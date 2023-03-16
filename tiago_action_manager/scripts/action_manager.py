@@ -1,13 +1,80 @@
 #!/usr/bin/env python
 
-from trajectory_msgs.msg import JointTrajectory
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from control_msgs.msg import JointTrajectoryControllerState
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 import rospy
 from constants import *
-import head_action as HA
-import torso_action as TA
+
+
+def create_torso_msg(where: torso_movements) -> JointTrajectory:
+    """
+    Creates torso msg for two pre-defined movements
+
+    Args:
+        where (torso_movements): UP/DOWN
+
+    Returns:
+        JointTrajectory: torso msg
+    """
+    torso_cmd = JointTrajectory()
+       
+    # Joint name to move
+    torso_cmd.joint_names = [J_TORSO]
+    
+    # Joint trajectory point to reach
+    point = JointTrajectoryPoint()
+    point.positions = [J_TORSO_TARGETUP if where == torso_movements.UP else J_TORSO_TARGETDOWN]
+    point.velocities = []
+    point.accelerations = []
+    point.effort = []
+    point.time_from_start = rospy.Duration(J_TORSO_TARGETTIME) #secs
+    torso_cmd.points = [point]
+    
+    return torso_cmd
+
+
+def create_head_msg(where: head_movements) -> JointTrajectory:
+    """
+    Creates head msg for two pre-defined movements
+
+    Args:
+        where (head_movements): LEFT/RIGHT/UP/DOWN
+
+    Returns:
+        JointTrajectory: head msg
+    """
+    head_cmd = JointTrajectory()
+    
+    # REMINDER: 
+    # J_HEAD_1 left & right
+    # J_HEAD_2 up & down
+    
+    # Joint name to move
+    head_cmd.joint_names = [J_HEAD_2, J_HEAD_1]
+    
+    if where == head_movements.LEFT or where == head_movements.RIGHT:
+        # Joint trajectory point to reach
+        point = JointTrajectoryPoint()
+        point.positions = [0.0, J_HEAD_1_TARGETLEFT if where == head_movements.LEFT else J_HEAD_1_TARGETRIGHT]
+        point.velocities = [0.0, 0.0]
+        point.accelerations = [0.0, 0.0]
+        point.effort = [0.0, 0.0]
+        point.time_from_start = rospy.Duration(J_HEAD_1_TARGETTIME) #secs
+        head_cmd.points = [point]
+        
+    elif where == head_movements.UP or where == head_movements.DOWN:  
+        # Joint trajectory point to reach
+        point = JointTrajectoryPoint()
+        point.positions = [J_HEAD_2_TARGETUP if where == head_movements.UP else J_HEAD_2_TARGETDOWN, 0.0]
+        point.velocities = [0.0, 0.0]
+        point.accelerations = [0.0, 0.0]
+        point.effort = [0.0, 0.0]
+        point.time_from_start = rospy.Duration(J_HEAD_2_TARGETTIME) #secs
+        head_cmd.points = [point]
+    
+    return head_cmd
 
 
 
@@ -45,22 +112,22 @@ class ActionController():
             key_action (String): data field containing the key 
         """
         if key_action.data == 'a':
-            self.pub_head_action.publish(HA.create_head_msg(head_movements.LEFT))
+            self.pub_head_action.publish(create_head_msg(head_movements.LEFT))
             while abs(self.head_1_pos - J_HEAD_1_TARGETLEFT) > 0.05: 
                 rospy.sleep(0.1)
-            self.pub_head_action.publish(HA.create_head_msg(head_movements.RIGHT))
+            self.pub_head_action.publish(create_head_msg(head_movements.RIGHT))
             
         elif key_action.data == 'b':
-            self.pub_head_action.publish(HA.create_head_msg(head_movements.UP))
+            self.pub_head_action.publish(create_head_msg(head_movements.UP))
             while abs(self.head_2_pos - J_HEAD_2_TARGETUP) > 0.05: 
                 rospy.sleep(0.1)
-            self.pub_head_action.publish(HA.create_head_msg(head_movements.DOWN))
+            self.pub_head_action.publish(create_head_msg(head_movements.DOWN))
             
         elif key_action.data == 'c':
-            self.pub_torso_action.publish(TA.create_torso_msg(torso_movements.UP))
+            self.pub_torso_action.publish(create_torso_msg(torso_movements.UP))
             while abs(self.torso_pos - J_TORSO_TARGETUP) > 0.05: 
                 rospy.sleep(0.1)
-            self.pub_torso_action.publish(TA.create_torso_msg(torso_movements.DOWN))
+            self.pub_torso_action.publish(create_torso_msg(torso_movements.DOWN))
             
         elif key_action.data == '+':
             SCALING_FACTOR = SCALING_FACTOR + 0.1
