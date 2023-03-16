@@ -63,11 +63,13 @@ class ActionController():
                 rospy.sleep(0.1)
             self.pub_torso_action.publish(TA.create_torso_msg(torso_movements.DOWN))
             
-        # elif key_action.data == 'd':
-        #     self.pub_torso_action.publish(TA.create_torso_msg(torso_movements.UP))
-        #     while abs(self.torso_pos - J_TORSO_TARGETUP) > 0.05: 
-        #         rospy.sleep(0.1)
-        #     self.pub_torso_action.publish(TA.create_torso_msg(torso_movements.DOWN))
+        elif key_action.data == '+':
+            SCALING_FACTOR = SCALING_FACTOR + 0.1
+            print("Velocity scaling factor:", SCALING_FACTOR)
+        
+        elif key_action.data == '-':
+            SCALING_FACTOR = SCALING_FACTOR - 0.1
+            print("Velocity scaling factor:", SCALING_FACTOR)
         
         
     def cb_head_state(self, msg):
