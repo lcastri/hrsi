@@ -23,14 +23,25 @@ def create_torso_msg(where: torso_movements) -> JointTrajectory:
     # Joint name to move
     torso_cmd.joint_names = [J_TORSO]
     
-    # Joint trajectory point to reach
-    point = JointTrajectoryPoint()
-    point.positions = [J_TORSO_TARGETUP if where == torso_movements.UP else J_TORSO_TARGETDOWN]
-    point.velocities = []
-    point.accelerations = []
-    point.effort = []
-    point.time_from_start = rospy.Duration(J_TORSO_TARGETTIME) #secs
-    torso_cmd.points = [point]
+    if where == torso_movements.UP or where == torso_movements.DOWN:
+        # Joint trajectory point to reach
+        point = JointTrajectoryPoint()
+        point.positions = [J_TORSO_TARGETUP if where == torso_movements.UP else J_TORSO_TARGETDOWN]
+        point.velocities = []
+        point.accelerations = []
+        point.effort = []
+        point.time_from_start = rospy.Duration(J_TORSO_TARGETTIME) #secs
+        torso_cmd.points = [point]
+        
+    elif where == torso_movements.CENTRE:
+        # Joint trajectory point to reach
+        point = JointTrajectoryPoint()
+        point.positions = [J_TORSO_TARGETUP/2]
+        point.velocities = []
+        point.accelerations = []
+        point.effort = []
+        point.time_from_start = rospy.Duration(J_TORSO_TARGETTIME) #secs
+        torso_cmd.points = [point]
     
     return torso_cmd
 
@@ -61,7 +72,7 @@ def create_head_msg(where: head_movements) -> JointTrajectory:
         point.velocities = [0.0, 0.0]
         point.accelerations = [0.0, 0.0]
         point.effort = [0.0, 0.0]
-        point.time_from_start = rospy.Duration(J_HEAD_1_TARGETTIME) #secs
+        point.time_from_start = rospy.Duration(J_HEAD_TARGETTIME) #secs
         head_cmd.points = [point]
         
     elif where == head_movements.UP or where == head_movements.DOWN:  
@@ -71,7 +82,17 @@ def create_head_msg(where: head_movements) -> JointTrajectory:
         point.velocities = [0.0, 0.0]
         point.accelerations = [0.0, 0.0]
         point.effort = [0.0, 0.0]
-        point.time_from_start = rospy.Duration(J_HEAD_2_TARGETTIME) #secs
+        point.time_from_start = rospy.Duration(J_HEAD_TARGETTIME) #secs
+        head_cmd.points = [point]
+        
+    elif where == head_movements.CENTRE:
+        # Joint trajectory point to reach
+        point = JointTrajectoryPoint()
+        point.positions = [0.0, 0.0]
+        point.velocities = [0.0, 0.0]
+        point.accelerations = [0.0, 0.0]
+        point.effort = [0.0, 0.0]
+        point.time_from_start = rospy.Duration(J_HEAD_TARGETTIME) #secs
         head_cmd.points = [point]
     
     return head_cmd
@@ -87,6 +108,9 @@ class ActionController():
         """
         Class constructor. Init publishers and subscribers
         """
+
+        self.scaling_factor = 0.0
+
         # Head subscribers & publishers
         self.pub_head_action = rospy.Publisher('/head_controller/command', JointTrajectory, queue_size = 10)
         self.sub_head_state = rospy.Subscriber("/head_controller/state", JointTrajectoryControllerState, self.cb_head_state)
@@ -111,33 +135,34 @@ class ActionController():
         Args:
             key_action (String): data field containing the key 
         """
-        rospy.loginfo("Action:", key_action.data)
         if key_action.data == 'a':
             self.pub_head_action.publish(create_head_msg(head_movements.LEFT))
-            while abs(self.head_1_pos - J_HEAD_1_TARGETLEFT) > 0.05: 
-                rospy.sleep(0.1)
+            while abs(self.head_1_pos - J_HEAD_1_TARGETLEFT) > 0.05: rospy.sleep(0.1)
             self.pub_head_action.publish(create_head_msg(head_movements.RIGHT))
+            while abs(self.head_1_pos - J_HEAD_1_TARGETRIGHT) > 0.05: rospy.sleep(0.1)
+            self.pub_head_action.publish(create_head_msg(head_movements.CENTRE))
             
         elif key_action.data == 'b':
             self.pub_head_action.publish(create_head_msg(head_movements.UP))
-            while abs(self.head_2_pos - J_HEAD_2_TARGETUP) > 0.05: 
-                rospy.sleep(0.1)
+            while abs(self.head_2_pos - J_HEAD_2_TARGETUP) > 0.05: rospy.sleep(0.1)
             self.pub_head_action.publish(create_head_msg(head_movements.DOWN))
+            while abs(self.head_2_pos - J_HEAD_2_TARGETDOWN) > 0.05: rospy.sleep(0.1)
+            self.pub_head_action.publish(create_head_msg(head_movements.CENTRE))
             
         elif key_action.data == 'c':
             self.pub_torso_action.publish(create_torso_msg(torso_movements.UP))
-            while abs(self.torso_pos - J_TORSO_TARGETUP) > 0.05: 
-                rospy.sleep(0.1)
+            while abs(self.torso_pos - J_TORSO_TARGETUP) > 0.05: rospy.sleep(0.1)
             self.pub_torso_action.publish(create_torso_msg(torso_movements.DOWN))
+            while abs(self.torso_pos - J_TORSO_TARGETDOWN) > 0.05: rospy.sleep(0.1)
+            self.pub_torso_action.publish(create_torso_msg(torso_movements.CENTRE))
             
         elif key_action.data == 'd':
-            SCALING_FACTOR = SCALING_FACTOR + 0.1
-            rospy.loginfo("Velocity scaling factor:", SCALING_FACTOR)
+            self.scaling_factor = self.scaling_factor + 0.1
         
         elif key_action.data == 'e':
-            SCALING_FACTOR = SCALING_FACTOR - 0.1
-            rospy.loginfo("Velocity scaling factor:", SCALING_FACTOR)
-        
+            if self.scaling_factor - 0.1 > -1: # check in order to not invert the velocity sign
+                self.scaling_factor = self.scaling_factor - 0.1
+
         
     def cb_head_state(self, msg):
         """
@@ -167,12 +192,12 @@ class ActionController():
         
         # scale the velocity
         new_msg = Twist()
-        new_msg.linear.x = msg.linear.x - msg.linear.x * SCALAR_FACTOR
-        new_msg.linear.y = msg.linear.y - msg.linear.y * SCALAR_FACTOR
-        new_msg.linear.z = msg.linear.z - msg.linear.z * SCALAR_FACTOR
-        new_msg.angular.x = msg.angular.x - msg.angular.x * SCALAR_FACTOR
-        new_msg.angular.y = msg.angular.y - msg.angular.y * SCALAR_FACTOR
-        new_msg.angular.z = msg.angular.z - msg.angular.z * SCALAR_FACTOR
+        new_msg.linear.x = msg.linear.x + msg.linear.x * self.scaling_factor
+        new_msg.linear.y = msg.linear.y + msg.linear.y * self.scaling_factor
+        new_msg.linear.z = msg.linear.z + msg.linear.z * self.scaling_factor
+        new_msg.angular.x = msg.angular.x + msg.angular.x * self.scaling_factor
+        new_msg.angular.y = msg.angular.y + msg.angular.y * self.scaling_factor
+        new_msg.angular.z = msg.angular.z + msg.angular.z * self.scaling_factor
         
         # publish new vel
         self.pub_cmd_vel.publish(new_msg)

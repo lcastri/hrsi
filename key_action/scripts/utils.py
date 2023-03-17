@@ -14,11 +14,10 @@ def print_instruction():
         Reading from the keyboard and Publishing to String!
         ---------------------------
         Pre-defined actions:
-            a - Head left and right 
-            b - Head up and down
-            c - Torso up and down
-            d - Increase the velocity by 10% 
-            e - Decrease the velocity by 10%
+        """
+    for k in KEY_MAP: msg = msg + "\n\t" + k + " - " + KEY_MAP[k]
+        
+    msg = msg + """
         ---------------------------
 
         Press q to quit.

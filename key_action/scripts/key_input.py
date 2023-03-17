@@ -63,7 +63,7 @@ if __name__=="__main__":
     
     while not rospy.is_shutdown():
         key = getKey(settings, KEY_TIMEOUT)
-        if key == 'a' or key == 'b' or key == 'c':
+        if key in KEY_MAP:
             pub_key_action.publish(key)
         elif key == 'q':
             restoreTerminalSettings(settings)

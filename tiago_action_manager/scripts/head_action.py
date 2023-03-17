@@ -29,7 +29,7 @@ def create_head_msg(where: head_movements) -> JointTrajectory:
         point.velocities = [0.0, 0.0]
         point.accelerations = [0.0, 0.0]
         point.effort = [0.0, 0.0]
-        point.time_from_start = rospy.Duration(J_HEAD_1_TARGETTIME) #secs
+        point.time_from_start = rospy.Duration(J_HEAD_TARGETTIME) #secs
         head_cmd.points = [point]
         
     elif where == head_movements.UP or where == head_movements.DOWN:  
