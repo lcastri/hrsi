@@ -111,7 +111,7 @@ class ActionController():
         Args:
             key_action (String): data field containing the key 
         """
-        print("Action:", key_action.data)
+        rospy.loginfo("Action:", key_action.data)
         if key_action.data == 'a':
             self.pub_head_action.publish(create_head_msg(head_movements.LEFT))
             while abs(self.head_1_pos - J_HEAD_1_TARGETLEFT) > 0.05: 
@@ -132,11 +132,11 @@ class ActionController():
             
         elif key_action.data == 'd':
             SCALING_FACTOR = SCALING_FACTOR + 0.1
-            print("Velocity scaling factor:", SCALING_FACTOR)
+            rospy.loginfo("Velocity scaling factor:", SCALING_FACTOR)
         
         elif key_action.data == 'e':
             SCALING_FACTOR = SCALING_FACTOR - 0.1
-            print("Velocity scaling factor:", SCALING_FACTOR)
+            rospy.loginfo("Velocity scaling factor:", SCALING_FACTOR)
         
         
     def cb_head_state(self, msg):
