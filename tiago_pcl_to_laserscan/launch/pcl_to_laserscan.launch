@@ -9,7 +9,7 @@
     <!-- PointCloud to LaserScan for Chest detection -->
     <node name="chest_detector" pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node">
       <remap from="cloud_in" to="/velodyne_points"/>
-      <remap from="scan" to="/detector/chest" />
+      <remap from="scan" to="/pcl_to_laserscan/chest" />
       <rosparam>
         target_frame: base_link
         transform_tolerance: 0.01
@@ -35,7 +35,7 @@
     <!-- PointCloud to LaserScan for Leg detection -->
     <node name="leg_detector" pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node">
       <remap from="cloud_in" to="/velodyne_points"/>
-      <remap from="scan" to="/detector/leg" />
+      <remap from="scan" to="/pcl_to_laserscan/leg" />
       <rosparam>
         target_frame: base_link
         transform_tolerance: 0.01
