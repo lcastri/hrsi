@@ -19,6 +19,6 @@
     </node>
 
     <!-- Launching action_manager node  -->
-    <node name="tiago_action_manager" pkg="tiago_action_manager" type="action_manager.py" launch-prefix="bash -c 'sleep 10; $0 $@' "/>
+    <node name="tiago_action_manager" pkg="tiago_action_manager" type="action_manager.py" output="screen" launch-prefix="bash -c 'sleep 10; $0 $@' "/>
 
 </launch>
