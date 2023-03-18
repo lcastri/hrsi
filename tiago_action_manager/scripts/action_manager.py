@@ -112,7 +112,7 @@ class ActionController():
 
         self.scaling_factor = 0.0
         self.goal = None
-        self.robot_goal_distance = 0.0
+        self.robot_goal_distance = float("inf")
 
         # Head subscribers & publishers
         self.pub_head_action = rospy.Publisher('/head_controller/command', JointTrajectory, queue_size = 10)
@@ -130,21 +130,30 @@ class ActionController():
         self.sub_key_action = rospy.Subscriber("/key_action", String, self.cb_action_listener)
         
         # Goal and Robot pose subscriber
-        self.sub_goal = rospy.Subscriber('/mobile_base_simple/goal', PoseStamped, self.cb_goal)
+        self.sub_goal = rospy.Subscriber('/move_base/current_goal', PoseStamped, self.cb_goal)
         self.sub_robot_pos = rospy.Subscriber('/robot_pose', PoseWithCovarianceStamped, self.cb_robot_pos)
-      
+    
     
     def cb_goal(self, msg : PoseStamped):
-        self.goal = msg.pose.position
-        rospy.loginfo("Goal set = [" + str(self.goal.x) + ", " + str(self.goal.y) + ", " + str(self.goal.z) + "]")
+        """
+        Callback for the Subscriber "sub_goal"
 
+        Args:
+            msg (PoseStamped): Robot current goal [map frame]
+        """
+        self.goal = msg.pose.position
         
         
     def cb_robot_pos(self, msg : PoseWithCovarianceStamped):
+        """
+        Callback for the Subscriber "sub_robot_pos"
+
+        Args:
+            msg (PoseWithCovarianceStamped): Robot current pose [map frame]
+        """
         self.robot_pose = msg.pose.pose.position
         if self.goal is not None:
             self.robot_goal_distance = math.sqrt((self.robot_pose.x - self.goal.x)**2 + (self.robot_pose.y - self.goal.y)**2)
-            rospy.loginfo("Distance to the GOAL = " + self.robot_goal_distance)
         
         
     def cb_action_listener(self, key_action):
@@ -177,13 +186,14 @@ class ActionController():
             self.pub_torso_action.publish(create_torso_msg(torso_movements.CENTRE))
             
         elif key_action.data == 'd':
-            self.scaling_factor = self.scaling_factor + 0.1
-            rospy.loginfo("scaling_factor = " + str(self.scaling_factor))
+            self.scaling_factor = 0.25
+            # rospy.loginfo("scaling_factor = " + str(self.scaling_factor))
             
         elif key_action.data == 'e':
-            if self.scaling_factor - 0.1 > -1: # check in order to not invert the velocity sign
-                self.scaling_factor = self.scaling_factor - 0.1
-            rospy.loginfo("scaling_factor = " + str(self.scaling_factor))
+            self.scaling_factor = -0.25
+            # if self.scaling_factor - 0.1 > -1: # check in order to not invert the velocity sign
+            #     self.scaling_factor = self.scaling_factor - 0.1
+            # rospy.loginfo("scaling_factor = " + str(self.scaling_factor))
 
         
     def cb_head_state(self, msg):
@@ -211,9 +221,7 @@ class ActionController():
         Args:
             msg (Twist): Twist msg from topic /mobile_base_controller/tmp_cmd_vel
         """
-        if self.robot_goal_distance < DIST_THRES: 
-            rospy.loginfo("scaling_factor = 0")
-            self.scaling_factor = 0
+        if self.robot_goal_distance < DIST_THRES: self.scaling_factor = 0
         
         # scale the velocity
         new_msg = Twist()
