@@ -136,12 +136,15 @@ class ActionController():
     
     def cb_goal(self, msg : PoseStamped):
         self.goal = msg.pose.position
+        rospy.loginfo("Goal set = [" + str(self.goal.x) + ", " + str(self.goal.y) + ", " + str(self.goal.z) + "]")
+
         
         
     def cb_robot_pos(self, msg : PoseWithCovarianceStamped):
         self.robot_pose = msg.pose.pose.position
         if self.goal is not None:
-            self.robot_goal_distance = math.sqrt((self.robot_pose.x - self.goal.x)**2 + (self.robot_pose.y - self.goal.y)**2 + (self.robot_pose.z - self.goal.z)**2)
+            self.robot_goal_distance = math.sqrt((self.robot_pose.x - self.goal.x)**2 + (self.robot_pose.y - self.goal.y)**2)
+            rospy.loginfo("Distance to the GOAL = " + self.robot_goal_distance)
         
         
     def cb_action_listener(self, key_action):
