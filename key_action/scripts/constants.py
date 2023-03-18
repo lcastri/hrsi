@@ -5,5 +5,5 @@ PUB_TOPIC_NAME = "/key_action"
 KEY_MAP = {'a' : "Head left and right", 
            'b' : "Head up and down", 
            'c' : "Torso up and down", 
-           'd' : "Increase the velocity by 25%", 
-           'e' : "Decrease the velocity by 25% "}
+           'd' : "Increase the velocity by SCALING FACTOR", 
+           'e' : "Decrease the velocity by SCALING FACTOR"}
