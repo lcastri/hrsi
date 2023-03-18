@@ -1,7 +1,7 @@
 <launch>
-
+    <arg name="scaling_factor"  default=0.5>
     <arg name="config_locks"    default="$(find twist_mux)/config/twist_mux_locks.yaml" />
-    <arg name="config_topics"    default="$(find twist_mux)/config/twist_mux_topics.yaml" />
+    <arg name="config_topics"   default="$(find twist_mux)/config/twist_mux_topics.yaml" />
 
     <!-- Killing twist_mux and twist_marker  -->
     <node name="killer" pkg="tiago_action_manager" type="killer.sh" />
@@ -19,6 +19,8 @@
     </node>
 
     <!-- Launching action_manager node  -->
-    <node name="tiago_action_manager" pkg="tiago_action_manager" type="action_manager.py" output="screen" launch-prefix="bash -c 'sleep 10; $0 $@' "/>
+    <node name="tiago_action_manager" pkg="tiago_action_manager" type="action_manager.py" output="screen" launch-prefix="bash -c 'sleep 10; $0 $@' ">
+        <param name="scaling_factor" value="$(arg scaling_factor)" /> 
+    </node>
 
 </launch>

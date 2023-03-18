@@ -8,6 +8,8 @@ from std_msgs.msg import String
 import rospy
 from constants import *
 
+SCALING_FACTOR = float(rospy.get_param('/tiago_action_manager/scaling_factor'))
+
 
 def create_torso_msg(where: torso_movements) -> JointTrajectory:
     """
@@ -186,11 +188,11 @@ class ActionController():
             self.pub_torso_action.publish(create_torso_msg(torso_movements.CENTRE))
             
         elif key_action.data == 'd':
-            self.scaling_factor = 0.25
+            self.scaling_factor = SCALING_FACTOR
             # rospy.loginfo("scaling_factor = " + str(self.scaling_factor))
             
         elif key_action.data == 'e':
-            self.scaling_factor = -0.25
+            self.scaling_factor = -SCALING_FACTOR
             # if self.scaling_factor - 0.1 > -1: # check in order to not invert the velocity sign
             #     self.scaling_factor = self.scaling_factor - 0.1
             # rospy.loginfo("scaling_factor = " + str(self.scaling_factor))
