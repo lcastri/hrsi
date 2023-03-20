@@ -3,7 +3,6 @@
 import os
 import rospy
 from std_msgs.msg import Bool
-import rosnode
 
 NODE_NAME = 'joy_priority_led'
 NODE_RATE = 10 #Hz
@@ -28,11 +27,13 @@ class JoyPriorityLed():
 
         if msg.data:
             os.system("pal-stop " + PAL_LED_MANAGER)
-            os.system("rosservice call /mm11/led/set_strip_flash 1 100 1000 0 0 0 255 255 255")
+            rospy.sleep(1)
+            os.system("rosservice call /mm11/led/set_strip_animation 0 2 100 5 250 0 0 0 0 255")
+            os.system("rosservice call /mm11/led/set_strip_animation 1 2 100 5 250 0 0 0 0 255")
+            # os.system("rosservice call /mm11/led/set_strip_flash 0 500 100 0 0 0 255 255 255")
+            # os.system("rosservice call /mm11/led/set_strip_flash 1 500 100 0 0 0 255 255 255")
         else:
-            node_list = rosnode.get_node_names()
-            if PAL_LED_MANAGER in node_list:
-                os.system("pal-start " + PAL_LED_MANAGER)
+            os.system("pal-start " + PAL_LED_MANAGER)
 
     
 if __name__ == '__main__':
