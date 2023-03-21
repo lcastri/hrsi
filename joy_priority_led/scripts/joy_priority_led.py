@@ -3,6 +3,7 @@
 import os
 import rospy
 from std_msgs.msg import Bool
+from mm11_msgs.srv import SetStripAnimation, SetStripAnimationRequest
 
 NODE_NAME = 'joy_priority_led'
 NODE_RATE = 10 #Hz
@@ -27,11 +28,27 @@ class JoyPriorityLed():
 
         if msg.data:
             os.system("pal-stop " + PAL_LED_MANAGER)
-            rospy.sleep(1)
-            os.system("rosservice call /mm11/led/set_strip_animation 0 2 100 5 250 0 0 0 0 255")
-            os.system("rosservice call /mm11/led/set_strip_animation 1 2 100 5 250 0 0 0 0 255")
-            # os.system("rosservice call /mm11/led/set_strip_flash 0 500 100 0 0 0 255 255 255")
-            # os.system("rosservice call /mm11/led/set_strip_flash 1 500 100 0 0 0 255 255 255")
+            srv = rospy.ServiceProxy("/mm11/led/set_strip_animation", SetStripAnimation)
+            res = srv(SetStripAnimationRequest(port = 0, 
+                                               animation_id = 2, 
+                                               param_1 = 100, 
+                                               param_2 = 5, 
+                                               r_1 = 250, 
+                                               g_1 = 0,
+                                               b_1 = 0, 
+                                               r_2 = 0, 
+                                               g_2 = 0, 
+                                               b_2 = 255))
+            res = srv(SetStripAnimationRequest(port = 1, 
+                                               animation_id = 2, 
+                                               param_1 = 100, 
+                                               param_2 = 5, 
+                                               r_1 = 250, 
+                                               g_1 = 0,
+                                               b_1 = 0, 
+                                               r_2 = 0, 
+                                               g_2 = 0, 
+                                               b_2 = 255))
         else:
             os.system("pal-start " + PAL_LED_MANAGER)
 
