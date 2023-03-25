@@ -2,7 +2,7 @@
   <arg name="bag_name" required="true" />
 
   <node pkg="rosbag" type="record" name="rosbag_record_data"
-        args="record -O /experiments/$(arg bag_name).bag 
+        args="record -O $(arg bag_name).bag 
               /velodyne_points 
               /head_controller/state 
               /torso_controller/state 
