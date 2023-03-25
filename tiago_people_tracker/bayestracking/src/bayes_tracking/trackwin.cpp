@@ -84,13 +84,12 @@ void TrackWin::setObject(const char* label,
                          double ypos,
                          double orientation,
                          color_t color,
-                         double SDx,
-                         double SDy,
+                         double varx,
+                         double vary,
+                         double covxy,
                          const ColMatrix* samples)
 {
-//    if ((orientation == TrackWin::NO_ORIENTATION) && ((SDx > 0)||(SDy > 0)))
-//          std::cerr << "### WARNING: Cannot draw covariance without orientation\n";
-    t_object obj = {label, xpos, ypos, orientation, color, SDx, SDy, samples};
+    t_object obj = {label, xpos, ypos, orientation, color, varx, vary, covxy, samples};
     _objVector.push_back(obj);
 }
 
@@ -133,17 +132,14 @@ void TrackWin::update(int delay, double cameraView, double cx, double cy)
         delete[] pts;
     }
     // draw the origin
-    CvScalar ciao = {.val={192, 192, 192, 0}};
     cvLine(_canvas,  // X axis
            cvPoint(m_xoffset, m_yoffset),
            cvPoint(m_scale + m_xoffset, m_yoffset),
-           ciao);
-        //    CV_RGB(192,192,192), 1);
+           CV_RGB(192,192,192), 1);
     cvLine(_canvas,  // Y axis
            cvPoint(m_xoffset, m_yoffset),
            cvPoint(m_xoffset, -m_scale + m_yoffset),
-           ciao);
-        //    CV_RGB(192,192,192), 1);
+           CV_RGB(192,192,192), 1);
     // draw all the objects
     for (uint i = 0; i < _objVector.size(); i++) {
         double dx = _objVector[i].x - _x0;
@@ -171,18 +167,21 @@ void TrackWin::update(int delay, double cameraView, double cx, double cy)
             cvLine(_canvas, cvPoint(x0, y0), cvPoint(x1, y1), color, 1, CV_AA);
         }
         // variance
-        if ((_objVector[i].SDx > 0) && (_objVector[i].SDy > 0)) {
-            int xSize = (int)(_objVector[i].SDx * m_scale);
-            int ySize = (int)(_objVector[i].SDy * m_scale);
-            if (xSize > 10000)
-                xSize = 10000;
-            if (ySize > 10000)
-                ySize = 10000;
-            cvEllipse(_canvas, cvPoint(x0, y0),
-                      cvSize((xSize > 0 ? xSize : 1), (ySize > 0 ? ySize : 1)),
-                      ((_objVector[i].th == NO_ORIENTATION ? 0. : _objVector[i].th) - _th0)*180./M_PI, 0, 359,
-                      cvScalar(192, 192, 192), 1, CV_AA);
+        if ((_objVector[i].varx > 0) && (_objVector[i].vary > 0)) {
+	  //Covariance matrix of our data
+	  double scale2 = m_scale*m_scale;
+	  Mat covmat = (Mat_<double>(2,2) << _objVector[i].varx*scale2, _objVector[i].covxy*scale2, _objVector[i].covxy*scale2, _objVector[i].vary*scale2);	
+
+	  //The mean of our data
+	  Point2f mean(x0,y0);
+
+	  //Calculate the error ellipse for a 95% confidence intervanl
+	  RotatedRect elps = getErrorEllipse(2.4477, mean, covmat);
+	  
+	  Mat mc(_canvas);
+	  ellipse(mc, elps, cv::Scalar(0,255,0), 1, CV_AA);
         }
+
         // label
         if (strlen(_objVector[i].label.c_str()) > 0)
             cvPutText(_canvas, _objVector[i].label.c_str(), cvPoint(x0, y0-r-5), &_font, color);
@@ -196,6 +195,35 @@ void TrackWin::update(int delay, double cameraView, double cx, double cy)
     _text[0] = '\0';
     // process graphic events
     cvWaitKey(delay);
+}
+
+
+
+
+RotatedRect TrackWin::getErrorEllipse(double chisquare_val, Point2f mean, Mat covmat){
+
+  //Get the eigenvalues and eigenvectors
+  cv::Mat eigenvalues, eigenvectors;
+  cv::eigen(covmat, true, eigenvalues, eigenvectors);
+
+  //Calculate the angle between the largest eigenvector and the x-axis
+  double angle = atan2(eigenvectors.at<double>(0,1), eigenvectors.at<double>(0,0));
+
+  //Shift the angle to the [0, 2pi] interval instead of [-pi, pi]
+  if(angle < 0)
+    angle += 6.28318530718;
+
+  //Conver to degrees instead of radians
+  angle = 180*angle/3.14159265359;
+
+  //Calculate the size of the minor and major axes
+  double halfmajoraxissize=chisquare_val*sqrt(eigenvalues.at<double>(0));
+  double halfminoraxissize=chisquare_val*sqrt(eigenvalues.at<double>(1));
+
+  //Return the oriented ellipse
+  //The -angle is used because OpenCV defines the angle clockwise instead of anti-clockwise
+  return cv::RotatedRect(mean, cv::Size2f(halfmajoraxissize, halfminoraxissize), -angle);
+
 }
 
 
@@ -245,6 +273,5 @@ CvScalar TrackWin::getColor(color_t color)
 
 void TrackWin::saveSnapshot(const char* filename)
 {
-    // cvSaveImage(filename, _canvas);
-    cv::imwrite(filename, cv::cvarrToMat(_canvas));
+    cvSaveImage(filename, _canvas);
 }

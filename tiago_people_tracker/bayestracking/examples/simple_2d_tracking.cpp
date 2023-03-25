@@ -27,16 +27,14 @@
 #include "bayes_tracking/trackwin.h"
 #include <cstdio>
 
-#define SLEEP_TIME 10000  // sleep time in [us]
-
+#define SLEEP_TIME 20000  // sleep time in [us]
 
 using namespace std;
 using namespace MTRK;
 using namespace Models;
 
-
 typedef UKFilter Filter;
-const int numOfTarget = 3;
+const int numOfTarget = 3;	// x 2
 const association_t alg = NNJPDA;
 const observ_model_t om_flag = POLAR;
 
@@ -47,10 +45,9 @@ static double getTime()
   return (double)t.tv_sec + (double)t.tv_usec/1000000.0;
 }
 
-
 // rule to detect lost track
 template<class FilterType>
-bool MTRK::isLost(const FilterType* filter, double varLimit) {
+bool MTRK::isLost(const FilterType* filter, double varLimit = 1.0) {
   // track lost if var(x)+var(y) > varLimit
   if (filter->X(0,0) + filter->X(2,2) > sqr(varLimit))
     return true;
@@ -61,15 +58,15 @@ bool MTRK::isLost(const FilterType* filter, double varLimit) {
 template<class FilterType>
 bool MTRK::initialize(FilterType* &filter, sequence_t& obsvSeq, observ_model_t om_flag) {
   assert(obsvSeq.size());
-
+  
   if (om_flag == CARTESIAN) {
     double dt = obsvSeq.back().time - obsvSeq.front().time;
     assert(dt); // dt must not be null
     FM::Vec v((obsvSeq.back().vec - obsvSeq.front().vec) / dt);
-
+    
     FM::Vec x(4);
     FM::SymMatrix X(4,4);
-
+    
     x[0] = obsvSeq.back().vec[0];
     x[1] = v[0];
     x[2] = obsvSeq.back().vec[1];
@@ -79,11 +76,11 @@ bool MTRK::initialize(FilterType* &filter, sequence_t& obsvSeq, observ_model_t o
     X(1,1) = sqr(1.5);
     X(2,2) = sqr(0.5);
     X(3,3) = sqr(1.5);
-
+    
     filter = new FilterType(4);
     filter->init(x, X);
   }
-
+  
   if (om_flag == POLAR) {
     double dt = obsvSeq.back().time - obsvSeq.front().time;
     assert(dt); // dt must not be null
@@ -91,10 +88,10 @@ bool MTRK::initialize(FilterType* &filter, sequence_t& obsvSeq, observ_model_t o
     double y2 = obsvSeq.back().vec[1]*sin(obsvSeq.back().vec[0]);
     double x1 = obsvSeq.front().vec[1]*cos(obsvSeq.front().vec[0]);
     double y1 = obsvSeq.front().vec[1]*sin(obsvSeq.front().vec[0]);
-
+    
     FM::Vec x(4);
     FM::SymMatrix X(4,4);
-
+    
     x[0] = x2;
     x[1] = (x2-x1)/dt;
     x[2] = y2;
@@ -104,23 +101,21 @@ bool MTRK::initialize(FilterType* &filter, sequence_t& obsvSeq, observ_model_t o
     X(1,1) = sqr(1.5);
     X(2,2) = sqr(0.5);
     X(3,3) = sqr(1.5);
-
+    
     filter = new FilterType(4);
     filter->init(x, X);
   }
   return true;
 }
 
-
 // command line option
 bool textDebug = false;
 bool winDebug = false;
 bool sendPredictions = false;
 
-
 int main(int argc, char *argv[]) {
   cout.precision(20);
-
+  
   // parse arguments
   for (int c = 1; c < argc; c++) {
     if (strcmp(argv[c], "-g") == 0 ) {
@@ -135,80 +130,34 @@ int main(int argc, char *argv[]) {
     cerr << "Valid options are '-g' (text debug) and '-w' (visual debug)" << endl;
     exit(EXIT_FAILURE);
   }
-
+  
   MultiTracker<Filter, 4> mtrk;    // state [x, v_x, y, v_y]
   CVModel cvm(5.0, 5.0);           // CV model with sigma_x = sigma_y = 5.0
   CartesianModel ctm(1.0, 1.0);    // Cartesian observation model
   PolarModel plm(0.3, 1.0);        // Polar observation model
   FM::Vec observation(2);          // observation [x, y]
   vector<FM::Vec> obsvBuffer;      // observation buffer
-
+  
   double dt, time = getTime(), obsvTime = -1;
-
+  
   TrackWin* trkwin = 0;
   if (winDebug) {
-    trkwin = new TrackWin(__FILE__, 640, 480, 20.);
+    trkwin = new TrackWin(__FILE__, 800, 600, 30.);
     trkwin->setOrigin(0., 0., 0.);
     trkwin->create();
   }
   char label[256];
-
-#if 0
-  Filter filter(4);
-  static bool initialized = false;
-  for (;;) {
-    dt = getTime() - time;
-    time += dt;
-
-    if (!initialized) {
-      FM::Vec x(4);
-      x[0] = 2 * cos(time);
-      x[1] = 0;
-      x[2] = 2 * sin(time);
-      x[3] = 0;
-      FM::SymMatrix X(4,4);
-      X.clear();
-      X(0,0) = sqr(0.5);
-      X(1,1) = sqr(0.1);
-      X(2,2) = sqr(0.5);
-      X(3,3) = sqr(0.1);
-      filter.init(x, X);
-      initialized = true;
-      cout << "initialized" << endl;
-    }
-
-    // prediction
-    cvm.update(dt);
-    filter.predict(cvm);
-
-    // observation
-    if (time - obsvTime > 30e-3) {
-      obsvTime = time;
-      FM::Vec obsv(2);
-      obsv[0] = 2 * cos(time);
-      obsv[1] = 2 * sin(time);
-      trkwin->setObject("O", obsv[0], obsv[1], TrackWin::NO_ORIENTATION, TrackWin::GREY);
-      filter.observe(bgm, obsv);
-    }
-
-    trkwin->setObject("T", filter.x[0], filter.x[2], atan2(filter.x[3], filter.x[1])/*orientation*/,
-          TrackWin::RED, sqrt(filter.X(0,0)), sqrt(filter.X(2,2))/*std dev*/);
-    trkwin->update(5);
-
-    usleep(SLEEP_TIME);
-  }
-
-#else
+  
   for (;;) {
     ///////////////// estimation begin /////////////////
     //     #warning fix 'dt' if not debugging
     dt = /*20e-3;*/getTime() - time;
     time += dt;
-
+    
     // prediction
     cvm.update(dt);
     mtrk.predict<CVModel>(cvm);
-
+    
     // observation
     obsvBuffer.clear();
     if (time - obsvTime > 30e-3) {
@@ -217,7 +166,7 @@ int main(int argc, char *argv[]) {
         FM::Vec obsv(2);
 	double range = 3 * (i+1);
 	double angle = time / (i+1);
-        // counter-clockwise
+        // counter-clockwise 
 	if (om_flag == CARTESIAN) {
 	  obsv[0] = range * cos(angle);
 	  obsv[1] = range * sin(angle);
@@ -243,14 +192,14 @@ int main(int argc, char *argv[]) {
           obsvBuffer.push_back(obsv);
         }
       }
-
+      
       // add last observation/s to tracker
       vector<FM::Vec>::iterator li, liEnd = obsvBuffer.end();
       for (li = obsvBuffer.begin(); li != liEnd; li++) {
         observation[0] = (*li)[0];
         observation[1] = (*li)[1];
         mtrk.addObservation(observation, obsvTime);
-
+	
         if (winDebug) {
           // show on trackwin
           sprintf(label, "(%f,%f)", observation[0], observation[1]);
@@ -260,39 +209,38 @@ int main(int argc, char *argv[]) {
 	    trkwin->setObject(label, observation[1]*cos(observation[0]), observation[1]*sin(observation[0]), TrackWin::NO_ORIENTATION, TrackWin::GREY);
 	}
       }
-
+      
       // process observations (if available) and update tracks
       if (om_flag == CARTESIAN) {
-	mtrk.process(ctm, alg, CARTESIAN);
+	mtrk.process(ctm, CARTESIAN, alg);
       }
       if (om_flag == POLAR) {
 	plm.update(0, 0, 0);
-	mtrk.process(plm, alg, POLAR);
+	mtrk.process(plm, POLAR, alg);
       }
       //       mtrk.print();
     }
     ///////////////// estimation end /////////////////
-
+    
     // show on trackwin
     if (winDebug) {
-    int n = mtrk.size();
+      int n = mtrk.size();
       for (int i = 0; i < n; i++) {
         sprintf(label, "trk_%ld", mtrk[i].id);
         trkwin->setObject(label, mtrk[i].filter->x[0], mtrk[i].filter->x[2], atan2(mtrk[i].filter->x[3], mtrk[i].filter->x[1])/*orientation*/,
-          TrackWin::RED, sqrt(mtrk[i].filter->X(0,0)), sqrt(mtrk[i].filter->X(2,2))/*std dev*/);
+			  TrackWin::RED, mtrk[i].filter->X(0,0), mtrk[i].filter->X(2,2), mtrk[i].filter->X(1,2)/*(co)variance*/);
       }
-      trkwin->update(5);
+      trkwin->update(20);
     }
-
+    
     int slp = SLEEP_TIME - (int)(1e6 * (getTime() - time));
     usleep(slp > 0 ? slp : 0);
   }
-#endif
-
+  
   if (winDebug) {
     trkwin->destroy();
     delete trkwin;
   }
-
-return EXIT_SUCCESS;
+  
+  return EXIT_SUCCESS;
 }

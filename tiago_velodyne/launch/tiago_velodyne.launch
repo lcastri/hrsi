@@ -1,0 +1,9 @@
+<launch>
+
+  <!-- Launching Velodyne -->
+  <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch" />
+
+  <!-- Transformation from torso_lift_link to velodyne -->
+  <node pkg="tf" type="static_transform_publisher" name="torso_lift_link_to_velodyne_tf" args="0 0 0.32 0 0 0 torso_lift_link velodyne 100" />
+
+</launch> 

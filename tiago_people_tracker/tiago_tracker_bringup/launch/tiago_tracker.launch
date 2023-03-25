@@ -20,6 +20,6 @@
   </node>
   
   <!-- rviz -->
-  <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tiago_tracker_bringup)/launch/tiago_tracker.rviz -f map"/> -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tiago_tracker_bringup)/launch/tiago_tracker.rviz -f map"/>
 
 </launch>

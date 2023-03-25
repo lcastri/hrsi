@@ -1,11 +1,6 @@
 <launch>
   <!-- Velodyne VLP-16 Driver -->
-  <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch" />
-
-  <!-- Transformation from torso_lift_link to velodyne -->
-  <node pkg="tf" type="static_transform_publisher" name="torso_lift_link_to_velodyne_tf" args="0 0 0.3 0 0 0 torso_lift_link velodyne 100" />
-  
-  <!-- <node pkg="nodelet" type="nodelet" name="velodyne_nodelet_manager" args="manager" output="screen"/>
+  <node pkg="nodelet" type="nodelet" name="velodyne_nodelet_manager" args="manager" output="screen"/>
   
   <node pkg="nodelet" type="nodelet" name="driver_nodelet" args="load velodyne_driver/DriverNodelet velodyne_nodelet_manager" output="screen">
     <param name="model" value="VLP16"/>
@@ -18,7 +13,7 @@
     <param name="calibration" value="$(find velodyne_pointcloud)/params/VLP16db.yaml"/>
     <param name="min_range" value="0.4"/>
     <param name="max_range" value="130.0"/>
-  </node> -->
+  </node>
   
   <!-- FLOBOT 3D Object Detector -->
   <node pkg="object3d_detector" type="object3d_detector" name="object3d_detector" output="screen" respawn="false">

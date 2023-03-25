@@ -23,13 +23,7 @@
 
 #include "bayes_tracking/BayesFilter/bayesFlt.hpp"
 #include "bayes_tracking/BayesFilter/matSup.hpp"
-// #include <opencv/highgui.h>
-#include <opencv2/highgui.hpp>
-#include <opencv2/highgui/highgui_c.h>
-// #include <opencv2/imgcodecs/imgcodecs_c.h>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/opencv.hpp>
-// #include <opencv2/imgcodecs.hpp>
+#include <opencv/highgui.h>
 #include <vector>
 #include <string>
 
@@ -44,7 +38,7 @@
 
 using namespace std;
 using namespace Bayesian_filter_matrix;
-// using namespace cv;
+using namespace cv;
 
 
 class TrackWin {
@@ -58,8 +52,9 @@ public:
     double y;            // y pos
     double th;           // orientation
     color_t color;       // color
-    double SDx;          // x standard deviation
-    double SDy;          // y standard deviation
+    double varx;          // x variance
+    double vary;          // y variance
+    double covxy;          // xy covariance
     const ColMatrix* s;  // samples
   } t_object;
 
@@ -97,12 +92,13 @@ public:
   * @param ypos Y position
   * @param orientation Orientation
   * @param color Color
-  * @param SDx X standard deviation
-  * @param SDy Y standard deviation
+  * @param varx X variance
+  * @param vary Y variance
+  * @param covxy XY covariance
   * @param samples sample from particle filter
   */
   void setObject(const char* label, double xpos, double ypos, double orientation = NO_ORIENTATION,
-                color_t color = BLACK, double SDx = -1, double SDy = -1, const ColMatrix* samples = NULL);
+                color_t color = BLACK, double varx = 0, double vary = 0, double covxy = 0, const ColMatrix* samples = NULL);
 
   /**
   * Set the origin (i.e. the observation point)
@@ -159,6 +155,7 @@ private:
 
 private:
   CvScalar getColor(color_t color);
+  RotatedRect getErrorEllipse(double chisquare_val, Point2f mean, Mat covmat);
 };
 
 #endif
