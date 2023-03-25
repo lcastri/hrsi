@@ -4,6 +4,8 @@ import os
 import rospy
 from std_msgs.msg import Bool
 from mm11_msgs.srv import SetStripAnimation, SetStripAnimationRequest
+import rosnode
+
 
 NODE_NAME = 'joy_priority_led'
 NODE_RATE = 10 #Hz
@@ -19,13 +21,13 @@ class JoyPriorityLed():
         """
         Class constructor. Init publishers and subscribers
         """
+        self.just_started = True
 
         # Joy subscriber
         self.sub_joy_priority = rospy.Subscriber("/joy_priority", Bool, self.cb_prioritytrigger)
         
     
     def cb_prioritytrigger(self, msg : Bool):
-
         if msg.data:
             os.system("pal-stop " + PAL_LED_MANAGER)
             srv = rospy.ServiceProxy("/mm11/led/set_strip_animation", SetStripAnimation)
@@ -50,7 +52,10 @@ class JoyPriorityLed():
                                                g_2 = 0, 
                                                b_2 = 255))
         else:
-            os.system("pal-start " + PAL_LED_MANAGER)
+            if not self.just_started:
+                os.system("pal-start " + PAL_LED_MANAGER)
+            else:
+                self.just_started = False
 
     
 if __name__ == '__main__':
@@ -60,7 +65,9 @@ if __name__ == '__main__':
     
     # Set node rate
     rate = rospy.Rate(NODE_RATE)
+
+    while rosnode.rosnode_ping("pal_led_manager", 1) is False: rospy.sleep(0.1)
+
+    joy_priority_led = JoyPriorityLed()
     
-    action_controller = JoyPriorityLed()
-        
     rospy.spin()
