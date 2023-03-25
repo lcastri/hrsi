@@ -1,10 +1,27 @@
 <launch>
 
-  <!-- Launching Velodyne -->
-  <!-- <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch" /> -->
+  <arg name="online" default="true" />
 
-  <!-- Transformation from torso_lift_link to velodyne -->
-  <!-- <node pkg="tf" type="static_transform_publisher" name="torso_lift_link_to_velodyne_tf" args="0 0 0.3 0 0 0 torso_lift_link velodyne 100" /> -->
+  <!-- rosbag play -->
+  <group unless="$(arg online)">
+    <arg name="robot"                     default="iron"/>
+
+    <!-- Robot model -->
+    <include file="$(find tiago_description)/robots/upload.launch">
+      <arg name="arm"                     value="False"/>
+      <arg name="end_effector"            value="False"/>
+      <arg name="ft_sensor"               value="$(eval {'titanium': 'schunk-ft'}.get(arg('robot'), 'false'))"/>
+      <arg name="laser_model"             value="sick-571"/>
+      <arg name="camera_model"            value="orbbec-astra"/>
+      <arg name="wrist_model"             value="False"/>
+      <arg name="no_safety_eps"           value="False"/>
+      <arg name="base_type"               value="pmb2"/>
+    </include>
+
+    <arg name="bag"/>
+    <param name="use_sim_time" value="true" />
+    <node pkg="rosbag" type="play" name="rosbag_play" args="--clock $(find tiago_tracker_bringup)/bags/$(arg bag).bag" required="true" />
+  </group>
 
   <!-- TIAGo 3D Object Detector -->
   <node pkg="object3d_detector" type="object3d_detector" name="object3d_detector" output="screen" respawn="false" >
@@ -16,7 +33,7 @@
   <rosparam command="load" file="$(find tiago_tracker_bringup)/config/detectors.yaml"/>
   <node pkg="bayes_people_tracker" type="bayes_people_tracker" name="bayes_people_tracker" output="screen" respawn="true" >
     <param name="base_link" type="string" value="base_link"/>
-    <param name="target_frame" type="string" value="base_link"/>
+    <param name="target_frame" type="string" value="map"/>
   </node>
   
   <!-- rviz -->

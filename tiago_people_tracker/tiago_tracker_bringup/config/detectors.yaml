@@ -12,5 +12,5 @@ bayes_people_tracker:
                 x: 0.1
                 y: 0.1
             matching_algorithm: "NN"
-            seq_size: 4
-            seq_time: 0.3
+            seq_size: 4                                        # Minimum number of observations for new track creation
+            seq_time: 0.5                                      # Minimum interval between observations for new track creation

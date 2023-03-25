@@ -356,3 +356,4 @@ MigrationBackup/
 *.pkl
 *.json
 *.jar
+*.bag
