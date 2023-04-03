@@ -1,0 +1,16 @@
+<launch>
+
+  <arg name="bag_name" />
+
+  <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch" /> -->
+
+  <node pkg="rosbag" type="record" name="rosbag_record_scene"
+        args="record -O $(arg bag_name)_scene.bag 
+              /camera/color/image_raw
+              /camera/color/image_raw/compressed"
+
+  />
+
+  <!-- <node name="realsenseviewer" pkg="tiago_record_data" type="realsense.sh" /> -->
+
+</launch> 

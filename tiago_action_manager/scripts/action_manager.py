@@ -6,7 +6,44 @@ from control_msgs.msg import JointTrajectoryControllerState
 from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped
 from std_msgs.msg import String
 import rospy
-from constants import *
+# from constants import *
+from enum import Enum
+
+
+class action_strategy(Enum):
+    RANDOM = 0
+    KEYBOARD = 1
+    
+class head_movements(Enum):
+    LEFT = 0
+    RIGHT = 1
+    UP = 2
+    DOWN = 3
+    CENTRE = 4
+    
+class torso_movements(Enum):
+    UP = 0
+    DOWN = 1
+    CENTRE = 2
+
+NODE_NAME = 'action_manager'
+NODE_RATE = 10 #Hz
+
+J_HEAD_1 = "head_1_joint"
+J_HEAD_2 = "head_2_joint"
+J_HEAD_1_TARGETLEFT = 1.2
+J_HEAD_1_TARGETRIGHT = -1.2
+J_HEAD_TARGETTIME = 1.5
+J_HEAD_2_TARGETUP = 0.7
+J_HEAD_2_TARGETDOWN = -1
+
+J_TORSO = "torso_lift_joint"
+J_TORSO_TARGETUP = 0.35
+J_TORSO_TARGETDOWN = 0.025
+J_TORSO_TARGETTIME = 1.5
+
+DIST_THRES = 2
+
 
 SCALING_FACTOR = float(rospy.get_param('/tiago_action_manager/scaling_factor'))
 
@@ -134,6 +171,7 @@ class ActionController():
         # Goal and Robot pose subscriber
         self.sub_goal = rospy.Subscriber('/move_base/current_goal', PoseStamped, self.cb_goal)
         self.sub_robot_pos = rospy.Subscriber('/robot_pose', PoseWithCovarianceStamped, self.cb_robot_pos)
+        self.pub_goal = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size = 10)
     
     
     def cb_goal(self, msg : PoseStamped):
@@ -189,13 +227,33 @@ class ActionController():
             
         elif key_action.data == 'd':
             self.scaling_factor = SCALING_FACTOR
-            # rospy.loginfo("scaling_factor = " + str(self.scaling_factor))
             
         elif key_action.data == 'e':
             self.scaling_factor = -SCALING_FACTOR
-            # if self.scaling_factor - 0.1 > -1: # check in order to not invert the velocity sign
-            #     self.scaling_factor = self.scaling_factor - 0.1
-            # rospy.loginfo("scaling_factor = " + str(self.scaling_factor))
+            
+        elif key_action.data == 'x':
+            point_X = PoseStamped()
+            point_X.header.frame_id = "map"
+            point_X.pose.position.x = -0.945
+            point_X.pose.position.y = 4.376
+            point_X.pose.position.z = 0.0
+            point_X.pose.orientation.x = 0.0
+            point_X.pose.orientation.y = 0.0
+            point_X.pose.orientation.z = 0.171
+            point_X.pose.orientation.w = 0.985
+            self.pub_goal.publish(point_X)
+            
+        elif key_action.data == 'y':
+            point_Y = PoseStamped()
+            point_Y.header.frame_id = "map"
+            point_Y.pose.position.x = 5.531
+            point_Y.pose.position.y = 6.961
+            point_Y.pose.position.z = 0
+            point_Y.pose.orientation.x = 0
+            point_Y.pose.orientation.y = 0
+            point_Y.pose.orientation.z = -0.985
+            point_Y.pose.orientation.w = 0.170
+            self.pub_goal.publish(point_Y)
 
         
     def cb_head_state(self, msg):

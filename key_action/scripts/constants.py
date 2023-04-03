@@ -6,4 +6,7 @@ KEY_MAP = {'a' : "Head left and right",
            'b' : "Head up and down", 
            'c' : "Torso up and down", 
            'd' : "Increase the velocity by SCALING FACTOR", 
-           'e' : "Decrease the velocity by SCALING FACTOR"}
+           'e' : "Decrease the velocity by SCALING FACTOR",
+           'x' : "TIAGo go to point X",
+           'y' : "TIAGo go to point Y",
+           }
