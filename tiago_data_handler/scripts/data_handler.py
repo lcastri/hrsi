@@ -9,6 +9,7 @@ import rospy
 import pandas as pd
 from shapely.geometry import *
 from people_msgs.msg import People
+import tf
 
 
 FILENAME = str(rospy.get_param("/tiago_data_handler/bagname"))
@@ -22,130 +23,23 @@ class Goal(Enum):
     Y = (5.531, 6.961)
     
 GOAL = None
-            
 
-class DataHandler():
+
+def get_risk(r_old_pos: tuple, h_old_pos: tuple, r_pos: tuple, h_pos: tuple, r_old_vel: float):
     """
-    Class handling data
+    Postprocesses the data and extracts the risk between robot and human
+
+    Args:
+        r_old_pos (tuple): t-1 x & y robot position
+        h_old_pos (tuple): t-1 x & y human position
+        r_pos (tuple): t x & y robot position
+        h_pos (tuple): t x & y human position
+        r_old_vel (float): t-1 robot velocity
+
+    Returns:
+        float: risk
     """
     
-    def __init__(self):
-        """
-        Class constructor. Init publishers and subscribers
-        """
-        
-        self.df_robot = pd.DataFrame(columns=['x_g', 'y_g', 'x_r', 'y_r', 'vel_h1', 'vel_h2', 'vel_t', 'vel_r', 'omega_r', 'd_rg', 't_rg'])
-        self.people_dict = dict()
-        # self.df = pd.DataFrame(columns = ['vel_h1', 'vel_h2', 'vel_t', 'vel_r', 'omega_r', 'd_hr', 'risk', 'v_h', 'theta_hr'])
-        
-        # Head subscriber
-        self.sub_head_state = message_filters.Subscriber("/head_controller/state", JointTrajectoryControllerState)
-        
-        # Torso subscriber
-        self.sub_torso_state = message_filters.Subscriber('/torso_controller/state', JointTrajectoryControllerState)
-        
-        # Base subscriber
-        self.sub_cmd_vel = message_filters.Subscriber('/mobile_base_controller/cmd_vel', Twist)
-                
-        # Robot pose subscriber
-        self.sub_robot_pos = message_filters.Subscriber('/robot_pose', PoseWithCovarianceStamped)
-                
-        # People subscriber
-        self.sub_person_pos = message_filters.Subscriber('/people_tracker/people', People)
-        
-        # Init synchronizer and assigning a callback 
-        self.ats = message_filters.ApproximateTimeSynchronizer([self.sub_head_state, 
-                                                                self.sub_torso_state, 
-                                                                self.sub_cmd_vel, 
-                                                                self.sub_robot_pos, 
-                                                                self.sub_person_pos], 
-                                                                queue_size = 100, slop = 1,
-                                                                allow_headerless = True)
-        self.ats.registerCallback(self.cb_handle_data)
-        
-        
-    def people_handler(self, people: list, index: int):
-        for p in people:
-            vel = math.sqrt(p.velocity.x**2 + p.velocity.y**2)
-            if vel >= 0.75:
-                if p.name not in self.people_dict:
-                    self.people_dict[p.name] = pd.DataFrame(columns=["x_h", "y_h", "vel_h"])
-                self.people_dict[p.name].loc[index] = {"x_h":p.position.x,
-                                                       "y_h":p.position.y,
-                                                       "vel_h":vel}
-                
-                
-    def cb_handle_data(self, head_state: JointTrajectoryControllerState, 
-                             torso_state: JointTrajectoryControllerState, 
-                             robot_vel: Twist, 
-                             robot_pose: PoseWithCovarianceStamped,
-                             people: People):
-        
-        # robot_pos_x = robot_pose.pose.pose.position.x
-        # robot_pos_y = robot_pose.pose.pose.position.y
-        # person_pos_x = people.people
-        # person_pos_y = people.pose.position.y
-        
-        # # Update robot state
-        # self.robot.update_pos(robot_pos_x, robot_pos_y)
-        # self.robot.update_vel(robot_vel)
-        
-        # # Update human state
-        # self.human.update_pos(person_pos_x, person_pos_y)
-        # self.human.update_vel(human_vel) #FIXME: find the human velocity coming from tracker
-        
-        # self.df_pos.loc[len(self.df_pos)] = {'x_g':GOAL[0],
-        #                                      'y_g':GOAL[1],
-        #                                      'x_r':robot_pos_x, 
-        #                                      'y_r':robot_pos_y, 
-        #                                      'x_h':person_pos_x, 
-        #                                      'y_h':person_pos_y}
-        
-        # head1_vel = head_state.actual.velocities[0]
-        # head2_vel = head_state.actual.velocities[1]
-        # torso_vel = torso_state.actual.velocities[0]
-        # base_vel = robot_vel.linear.x
-        # base_ang_vel = robot_vel.angular.z
-        # d_hr = math.dist([robot_pos_x, robot_pos_y], [person_pos_x, person_pos_y])
-        # risk = self.get_risk()
-        # # #TODO: compute v_h
-        # # #TODO: compute risk
-        # # #TODO: compute angle 
-        # self.df.loc[len(self.df)] = {'vel_h1': head1_vel, 
-        #                              'vel_h2': head2_vel, 
-        #                              'vel_t': torso_vel, 
-        #                              'vel_r': base_vel, 
-        #                              'omega_r': base_ang_vel,
-        #                              'd_hr': d_hr,
-        #                              'risk': risk,
-        #                              } #TODO: add the other vars
-        
-        robot_pos_x = robot_pose.pose.pose.position.x
-        robot_pos_y = robot_pose.pose.pose.position.y
-        
-        head1_vel = head_state.actual.velocities[0]
-        head2_vel = head_state.actual.velocities[1]
-        torso_vel = torso_state.actual.velocities[0]
-        base_vel = robot_vel.linear.x
-        base_ang_vel = robot_vel.angular.z
-        d_rg = math.dist([robot_pos_x, robot_pos_y], [GOAL[0], GOAL[1]])
-        t_rg = d_rg/(base_vel + 0.001)
-        self.df_robot.loc[len(self.df_robot)] = {'x_g':GOAL[0],
-                                                 'y_g':GOAL[1],
-                                                 'x_r':robot_pos_x, 
-                                                 'y_r':robot_pos_y,
-                                                 'vel_h1': head1_vel, 
-                                                 'vel_h2': head2_vel, 
-                                                 'vel_t': torso_vel, 
-                                                 'vel_r': base_vel, 
-                                                 'omega_r': base_ang_vel,
-                                                 'd_rg': d_rg,
-                                                 't_rg': t_rg,
-                                                 }
-        self.people_handler(people.people, len(self.df_robot))      
-        
-        
-def get_risk(r_old_pos, h_old_pos, r_pos, h_pos, r_old_vel):     
     risk = r_old_vel
     
     # A and B displacements
@@ -197,25 +91,178 @@ def get_risk(r_old_pos, h_old_pos, r_pos, h_pos, r_old_vel):
     
     
 def postprocess(df: pd.DataFrame):
-    df_dhr = pd.DataFrame(columns=["d_rh"])
-    df_risk = pd.DataFrame(columns=["risk"])
+    """
+    Adds distance human-robot, risk, angle robot-goal, angle robot-human to the dataframe
+
+    Args:
+        df (pd.DataFrame): dataframe to complete
+
+    Returns:
+        DataFrame: completed dataframe
+    """
+    
+    df_new = pd.DataFrame(columns=["d_rh", "risk", "theta_rg", "theta_rh"])
     for t in range(1, len(df)):
-        r_old_pos = (df["x_r"][t-1], df["y_r"][t-1])
-        h_old_pos = (df["x_h"][t-1], df["y_h"][t-1])
-        r_old_vel = df["vel_r"][t-1]
-        r_pos = (df["x_r"][t], df["y_r"][t])
-        h_pos = (df["x_h"][t], df["y_h"][t])
+        r_old_pos = (df["r_x"][t-1], df["r_y"][t-1])
+        h_old_pos = (df["h_x"][t-1], df["h_y"][t-1])
+        r_old_vel = df["r_v"][t-1]
+        r_pos = (df["r_x"][t], df["r_y"][t])
+        h_pos = (df["h_x"][t], df["h_y"][t])
         try:
             risk = get_risk(r_old_pos, h_old_pos, r_pos, h_pos, r_old_vel)
         except:
             risk = 0
-        df_risk.loc[t] = {"risk": risk}
-        df_dhr.loc[t] = {"d_rh": math.dist([df["x_r"][t], df["y_r"][t]], [df["x_h"][t], df["y_h"][t]])}
+        df_new.loc[t] = {"d_rh": math.dist([df["r_x"][t], df["r_y"][t]], [df["h_x"][t], df["h_y"][t]]),
+                         "risk": risk,
+                         "theta_rg": math.atan2(GOAL[1] - df["r_y"][t], GOAL[0] - df["r_x"][t]),
+                         "theta_rh": math.atan2(df["h_y"][t] - df["r_y"][t], df["h_x"][t] - df["r_x"][t]), 
+                         }
     
-    df_dhr.loc[0] =  math.dist([df["x_r"][0], df["y_r"][0]], [df["x_h"][0], df["y_h"][0]])
-    df_risk.loc[0] = df_risk.loc[1]
-    df_complete = pd.concat([df, df_dhr, df_risk], axis = 1)
+    df_new.loc[0] =  {"d_rh": math.dist([df["r_x"][0], df["r_y"][0]], [df["h_x"][0], df["h_y"][0]]),
+                      "risk": df_new["risk"][1],}
+                      
+    df_complete = pd.concat([df, df_new], axis = 1)
     return df_complete
+
+
+def get_2DPose(p: PoseWithCovarianceStamped):
+    """
+    Extracts x, y and theta from pose
+
+    Args:
+        p (PoseWithCovarianceStamped): pose
+
+    Returns:
+        tuple: x, y, theta
+    """
+    x = p.pose.pose.position.x
+    y = p.pose.pose.position.y
+    
+    q = (
+        p.pose.pose.orientation.x,
+        p.pose.pose.orientation.y,
+        p.pose.pose.orientation.z,
+        p.pose.pose.orientation.w
+    )
+    
+    m = tf.transformations.quaternion_matrix(q)
+    _, _, yaw = tf.transformations.euler_from_matrix(m)
+    return x, y, yaw
+            
+
+class DataHandler():
+    """
+    Class handling data
+    """
+    
+    def __init__(self):
+        """
+        Class constructor. Init publishers and subscribers
+        """
+        
+        self.df_robot = pd.DataFrame(columns=['g_x', 'g_y', 'r_x', 'r_y', 'r_theta', 'r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_omega', 'd_rg', 't_rg'])
+        self.people_dict = dict()
+        # self.df = pd.DataFrame(columns = ['vel_h1', 'vel_h2', 'vel_t', 'vel_r', 'omega_r', 'd_hr', 'risk', 'v_h', 'theta_hr'])
+        
+        # Head subscriber
+        self.sub_head_state = message_filters.Subscriber("/head_controller/state", JointTrajectoryControllerState)
+        
+        # Torso subscriber
+        self.sub_torso_state = message_filters.Subscriber('/torso_controller/state', JointTrajectoryControllerState)
+        
+        # Base subscriber
+        self.sub_cmd_vel = message_filters.Subscriber('/mobile_base_controller/cmd_vel', Twist)
+                
+        # Robot pose subscriber
+        self.sub_robot_pos = message_filters.Subscriber('/robot_pose', PoseWithCovarianceStamped)
+                
+        # People subscriber
+        self.sub_person_pos = message_filters.Subscriber('/people_tracker/people', People)
+        
+        # Init synchronizer and assigning a callback 
+        self.ats = message_filters.ApproximateTimeSynchronizer([self.sub_head_state, 
+                                                                self.sub_torso_state, 
+                                                                self.sub_cmd_vel, 
+                                                                self.sub_robot_pos, 
+                                                                self.sub_person_pos], 
+                                                                queue_size = 100, slop = 1,
+                                                                allow_headerless = True)
+        self.ats.registerCallback(self.cb_handle_data)
+        
+        
+    def people_handler(self, people: list, index: int):
+        """
+        Extracts people state (x, y, vel)
+
+        Args:
+            people (list): list of people
+            index (int): current time step
+        """
+        for p in people:
+            # Velocity
+            vel = math.sqrt(p.velocity.x**2 + p.velocity.y**2)
+            
+            # Orientation
+            theta = math.atan2(p.velocity.y, p.velocity.x)
+            theta = math.fmod(theta, 2*math.pi)
+            if theta < 0:
+                theta += 2*math.pi
+            
+            # Position
+            if vel >= 0.75:
+                if p.name not in self.people_dict:
+                    self.people_dict[p.name] = pd.DataFrame(columns=["h_x", "h_y", "h_v", "h_theta"])
+                self.people_dict[p.name].loc[index] = {"h_x": p.position.x,
+                                                       "h_y": p.position.y,
+                                                       "h_v": vel,
+                                                       "h_theta": theta}
+                
+                
+    def cb_handle_data(self, head_state: JointTrajectoryControllerState, 
+                             torso_state: JointTrajectoryControllerState, 
+                             robot_vel: Twist, 
+                             robot_pose: PoseWithCovarianceStamped,
+                             people: People):
+        """
+        Synchronized callback
+
+        Args:
+            head_state (JointTrajectoryControllerState): robot head state
+            torso_state (JointTrajectoryControllerState): robot torso state
+            robot_vel (Twist): robot base velocity
+            robot_pose (PoseWithCovarianceStamped): robot pose
+            people (People): tracked people
+        """
+        
+        # Robot 2D pose (x, y, theta)
+        r_x, r_y, r_theta = get_2DPose(robot_pose)
+        
+        # Head motors 1 & 2 velocities
+        head1_vel = head_state.actual.velocities[0]
+        head2_vel = head_state.actual.velocities[1]
+        
+        # Torso velocity
+        torso_vel = torso_state.actual.velocities[0]
+        
+        # Base linear & angular velocity
+        base_vel = robot_vel.linear.x
+        base_ang_vel = robot_vel.angular.z
+        
+        # Distance Robot-current_goal & time to reach current_goal
+        d_rg = math.dist([r_x, r_y], [GOAL[0], GOAL[1]])
+        t_rg = d_rg/(base_vel + 0.001)
+        
+        # appending new data row in robot Dataframe
+        self.df_robot.loc[len(self.df_robot)] = {'g_x': GOAL[0], 'g_y': GOAL[1],
+                                                 'r_x': r_x, 'r_y': r_y, 'r_theta': r_theta,
+                                                 'r_v_h1': head1_vel, 'r_v_h2': head2_vel, 
+                                                 'r_v_t': torso_vel, 
+                                                 'r_v': base_vel, 'r_omega': base_ang_vel,
+                                                 'd_rg': d_rg, 't_rg': t_rg,
+                                                 }
+        
+        self.people_handler(people.people, len(self.df_robot))      
+        
             
 
 if __name__ == '__main__':
@@ -233,15 +280,20 @@ if __name__ == '__main__':
         
     rospy.spin()
             
+    # FIXME: this take the tracked person with longest time-series. 
+    # It should be changed to take the correct person. 
     len_tmp = {}
     for p in data_handler.people_dict:
         len_tmp[p] = len(data_handler.people_dict[p])
-
     p = max(len_tmp, key=len_tmp.get)
+    ###############################################################
         
     df_complete = pd.concat([data_handler.df_robot, data_handler.people_dict[p]], axis = 1)
     df_complete = df_complete.ffill().bfill()
     
     df_final = postprocess(df_complete)
     df_final.to_csv(DATAPATH + "/" + FILENAME + "_complete.csv")
-    df_final.to_csv(DATAPATH + "/" + FILENAME + "_causal.csv", columns=['vel_h1', 'vel_h2', 'vel_t', 'vel_r', 'omega_r', 'd_rg', 't_rg', 'vel_h', 'risk', 'd_rh'])
+    df_final.to_csv(DATAPATH + "/" + FILENAME + "_causal.csv", columns=['r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_theta',
+                                                                        'd_rg', 't_rg', 'theta_rg',
+                                                                        'h_v', 'h_theta', 
+                                                                        'risk', 'd_rh', 'theta_rh'])

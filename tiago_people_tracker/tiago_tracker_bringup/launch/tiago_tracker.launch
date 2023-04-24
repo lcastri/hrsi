@@ -40,6 +40,7 @@
   <!-- rviz -->
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tiago_tracker_bringup)/launch/tiago_tracker.rviz -f map"/>
 
+  <!-- Data handler pkg -->
   <node name="tiago_data_handler" pkg="tiago_data_handler" type="data_handler.py" output="screen">
       <param name="bagname"   value="$(arg bag)" /> 
       <param name="datapath"  value="$(find tiago_data_handler)/data"/>
