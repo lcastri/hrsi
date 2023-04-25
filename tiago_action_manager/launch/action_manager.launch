@@ -1,5 +1,5 @@
 <launch>
-    <arg name="scaling_factor"  default="0.5" />
+    <arg name="scaling_factor"  default="0.65" />
     <arg name="config_locks"    default="$(find twist_mux)/config/twist_mux_locks.yaml" />
     <arg name="config_topics"   default="$(find twist_mux)/config/twist_mux_topics.yaml" />
 
