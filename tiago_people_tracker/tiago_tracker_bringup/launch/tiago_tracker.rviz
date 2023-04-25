@@ -16,16 +16,6 @@ Panels:
     Tree Height: 666
   - Class: rviz/Selection
     Name: Selection
-  - Class: pal-navigation_rviz_plugins/DockUndockPanel
-    Name: DockUndockPanel
-  - Class: pal-waypoint_rviz_plugins/Waypoint Group
-    Name: Waypoint Group
-  - Class: pal-navigation_rviz_plugins/MapManagementWidget
-    Name: MapManagementWidget
-  - Class: pal-navigation_rviz_plugins/NavigationUtilsPanel
-    Name: NavigationUtilsPanel
-  - Class: pal-teleop_rviz_plugins/PalTeleop
-    Name: PalTeleop
   - Class: rviz/Views
     Expanded:
       - /Current View1
