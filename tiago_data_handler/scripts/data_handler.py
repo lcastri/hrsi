@@ -280,20 +280,21 @@ if __name__ == '__main__':
         
     rospy.spin()
             
-    # FIXME: this take the tracked person with longest time-series. 
-    # It should be changed to take the correct person. 
-    len_tmp = {}
-    for p in data_handler.people_dict:
-        len_tmp[p] = len(data_handler.people_dict[p])
-    p = max(len_tmp, key=len_tmp.get)
-    ###############################################################
+    if data_handler.people_dict:
+        # FIXME: this take the tracked person with longest time-series. 
+        # It should be changed to take the correct person. 
+        len_tmp = {}
+        for p in data_handler.people_dict:
+            len_tmp[p] = len(data_handler.people_dict[p])
+        p = max(len_tmp, key=len_tmp.get)
+        ###############################################################
+            
+        df_complete = pd.concat([data_handler.df_robot, data_handler.people_dict[p]], axis = 1)
+        df_complete = df_complete.ffill().bfill()
         
-    df_complete = pd.concat([data_handler.df_robot, data_handler.people_dict[p]], axis = 1)
-    df_complete = df_complete.ffill().bfill()
-    
-    df_final = postprocess(df_complete)
-    df_final.to_csv(DATAPATH + "/" + FILENAME + "_complete.csv")
-    df_final.to_csv(DATAPATH + "/" + FILENAME + "_causal.csv", columns=['r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_theta',
-                                                                        'd_rg', 't_rg', 'theta_rg',
-                                                                        'h_v', 'h_theta', 
-                                                                        'risk', 'd_rh', 'theta_rh'])
+        df_final = postprocess(df_complete)
+        df_final.to_csv(DATAPATH + "/" + FILENAME + "_complete.csv")
+        df_final.to_csv(DATAPATH + "/" + FILENAME + "_causal.csv", columns=['r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_theta',
+                                                                            'd_rg', 't_rg', 'theta_rg',
+                                                                            'h_v', 'h_theta', 
+                                                                            'risk', 'd_rh', 'theta_rh'])

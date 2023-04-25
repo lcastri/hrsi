@@ -12,7 +12,6 @@ Panels:
         - /Planning1/Base1/Local1/motion vector1
         - /Mapping1/Map (with Virtual Obstacles)1
         - /Tracking1
-        - /Tracking1/Velodyne1/Status1
       Splitter Ratio: 0.552763819694519
     Tree Height: 666
   - Class: rviz/Selection
@@ -283,7 +282,7 @@ Visualization Manager:
           Marker Topic: twist_marker
           Name: Twist
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -875,9 +874,6 @@ Visualization Manager:
     - Class: rviz/PublishPoint
       Single click: true
       Topic: clicked_point
-    - Class: pal-waypoint_rviz_plugins/Point of Interest
-    - Class: pal-waypoint_rviz_plugins/Zone of Interest
-    - Class: pal-waypoint_rviz_plugins/Virtual Obstacle
   Value: true
   Views:
     Current:
