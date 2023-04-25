@@ -2,6 +2,7 @@
 
 from enum import Enum
 import math
+import os
 from control_msgs.msg import JointTrajectoryControllerState
 from geometry_msgs.msg import Twist, PoseWithCovarianceStamped
 import message_filters
@@ -10,6 +11,7 @@ import pandas as pd
 from shapely.geometry import *
 from people_msgs.msg import People
 import tf
+import pathlib
 
 
 FILENAME = str(rospy.get_param("/tiago_data_handler/bagname"))
@@ -119,7 +121,10 @@ def postprocess(df: pd.DataFrame):
                          }
     
     df_new.loc[0] =  {"d_rh": math.dist([df["r_x"][0], df["r_y"][0]], [df["h_x"][0], df["h_y"][0]]),
-                      "risk": df_new["risk"][1],}
+                      "risk": df_new["risk"][1],
+                      "theta_rg": math.atan2(GOAL[1] - df["r_y"][t], GOAL[0] - df["r_x"][t]),
+                      "theta_rh": math.atan2(df["h_y"][0] - df["r_y"][0], df["h_x"][0] - df["r_x"][0]), 
+                     }
                       
     df_complete = pd.concat([df, df_new], axis = 1)
     return df_complete
@@ -162,7 +167,6 @@ class DataHandler():
         
         self.df_robot = pd.DataFrame(columns=['g_x', 'g_y', 'r_x', 'r_y', 'r_theta', 'r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_omega', 'd_rg', 't_rg'])
         self.people_dict = dict()
-        # self.df = pd.DataFrame(columns = ['vel_h1', 'vel_h2', 'vel_t', 'vel_r', 'omega_r', 'd_hr', 'risk', 'v_h', 'theta_hr'])
         
         # Head subscriber
         self.sub_head_state = message_filters.Subscriber("/head_controller/state", JointTrajectoryControllerState)
@@ -204,9 +208,9 @@ class DataHandler():
             
             # Orientation
             theta = math.atan2(p.velocity.y, p.velocity.x)
-            theta = math.fmod(theta, 2*math.pi)
-            if theta < 0:
-                theta += 2*math.pi
+            # theta = math.fmod(theta, 2*math.pi)
+            # if theta < 0:
+            #     theta += 2*math.pi
             
             # Position
             if vel >= 0.75:
@@ -266,6 +270,8 @@ class DataHandler():
             
 
 if __name__ == '__main__':
+    if not os.path.exists(DATAPATH):
+        os.mkdir(DATAPATH)
         
     # Init node
     rospy.init_node(NODE_NAME)
