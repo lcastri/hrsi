@@ -1,29 +1,5 @@
 <launch>
 
-  <arg name="online" default="true" />
-
-  <!-- rosbag play -->
-  <group unless="$(arg online)">
-    <arg name="robot"                     default="iron"/>
-
-    <!-- Robot model -->
-    <include file="$(find tiago_description)/robots/upload.launch">
-      <arg name="arm"                     value="False"/>
-      <arg name="end_effector"            value="False"/>
-      <arg name="ft_sensor"               value="$(eval {'titanium': 'schunk-ft'}.get(arg('robot'), 'false'))"/>
-      <arg name="laser_model"             value="sick-571"/>
-      <arg name="camera_model"            value="orbbec-astra"/>
-      <arg name="wrist_model"             value="False"/>
-      <arg name="no_safety_eps"           value="False"/>
-      <arg name="base_type"               value="pmb2"/>
-    </include>
-
-    <arg name="bag"/>
-
-    <param name="use_sim_time" value="true" />
-    <node pkg="rosbag" type="play" name="rosbag_play" args="--clock $(find tiago_tracker_bringup)/bags/$(arg bag).bag" required="true" />
-  </group>
-
   <!-- TIAGo 3D Object Detector -->
   <node pkg="object3d_detector" type="object3d_detector" name="object3d_detector" output="screen" respawn="true" >
     <param name="model_file_name" type="string" value="$(find object3d_detector)/libsvm/pedestrian.model"/>
@@ -39,11 +15,5 @@
   
   <!-- rviz -->
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tiago_tracker_bringup)/launch/tiago_tracker.rviz -f map"/>
-
-  <!-- Data handler pkg -->
-  <node name="tiago_data_handler" pkg="tiago_data_handler" type="data_handler.py" output="screen">
-      <param name="bagname"   value="$(arg bag)" /> 
-      <param name="datapath"  value="$(find tiago_data_handler)/data"/>
-  </node>
 
 </launch>

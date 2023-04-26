@@ -270,8 +270,10 @@ class DataHandler():
             
 
 if __name__ == '__main__':
-    if not os.path.exists(DATAPATH):
-        os.mkdir(DATAPATH)
+    os.makedirs(DATAPATH, exist_ok=True)
+
+    # if not os.path.exists(DATAPATH):
+    #     os.mkdir(DATAPATH)
         
     # Init node
     rospy.init_node(NODE_NAME)

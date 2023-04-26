@@ -1,0 +1,39 @@
+<launch>
+
+  <arg name="bagname"/>
+
+  <!-- Robot model -->
+  <include file="$(find tiago_description)/robots/upload.launch">
+    <arg name="arm"                     value="False"/>
+    <arg name="end_effector"            value="False"/>
+    <arg name="ft_sensor"               value="False"/>
+    <arg name="laser_model"             value="sick-571"/>
+    <arg name="camera_model"            value="orbbec-astra"/>
+    <arg name="wrist_model"             value="False"/>
+    <arg name="no_safety_eps"           value="False"/>
+    <arg name="base_type"               value="pmb2"/>
+  </include>
+
+  <!-- rosbags play -->
+  <param name="use_sim_time" value="true" />
+  <node name="rosbag_play_data" pkg="rosbag" type="play" 
+        args="--clock $(find tiago_postprocess_bringup)/bags/$(arg bagname).bag" required="true" />
+  <node name="rosbag_play_scene" pkg="rosbag" type="play" 
+        args="$(find tiago_postprocess_bringup)/bags/$(arg bagname)_scene.bag" required="true" />
+
+  <!-- Bayes Tracker -->
+  <include file="$(find tiago_tracker_bringup)/launch/tiago_tracker.launch"/>
+
+  <!-- Data handler pkg -->
+  <node name="tiago_data_handler" pkg="tiago_data_handler" type="data_handler.py" output="screen">
+    <param name="bagname"               value="$(arg bagname)" /> 
+    <param name="datapath"              value="$(find tiago_postprocess_bringup)/data"/>
+  </node>
+
+  <!-- Scene handler pkg -->
+  <node name="tiago_scene_handler" pkg="tiago_scene_handler" type="scene_handler.py" output="screen">
+    <param name="bagname"               value="$(arg bagname)" /> 
+    <param name="scenepath"             value="$(find tiago_postprocess_bringup)/scene"/>
+  </node>
+
+</launch> 
