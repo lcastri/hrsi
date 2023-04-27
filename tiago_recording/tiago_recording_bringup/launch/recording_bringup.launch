@@ -2,21 +2,21 @@
 
   <arg name="bagname" />
 
-    <node name="rosbag_record_data" pkg="rosbag" type="record" machine="tiago-29c"
-        args="record -O ~/rosbags/$(arg bagname).bag 
-              /velodyne_points 
-              /head_controller/state 
-              /torso_controller/state 
-              /mobile_base_controller/cmd_vel 
-              /robot_pose
-              /tf 
-              /tf_static"
-    />
-
-    <node name="rosbag_record_scene" pkg="rosbag" type="record" machine="localhost"
-        args="record -O ~/rosbags/$(arg bagname)_scene.bag 
-              /camera/color/image_raw
-              /camera/color/image_raw/compressed"
-
+  <node name="rosbag_record_data" pkg="rosbag" type="record" machine="tiago-29c"
+      args="record -O ~/rosbags/$(arg bagname).bag 
+            /velodyne_points 
+            /head_controller/state 
+            /torso_controller/state 
+            /mobile_base_controller/cmd_vel 
+            /robot_pose
+            /tf 
+            /tf_static"
   />
+
+  <node name="rosbag_record_scene" pkg="rosbag" type="record" machine="localhost"
+      args="record -O ~/rosbags/$(arg bagname)_scene.bag 
+            /camera/color/image_raw
+            /camera/color/image_raw/compressed"
+  />
+
 </launch>
