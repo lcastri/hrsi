@@ -4,14 +4,14 @@ from enum import Enum
 import math
 import os
 from control_msgs.msg import JointTrajectoryControllerState
-from geometry_msgs.msg import Twist, PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped
+from nav_msgs.msg import Odometry
 import message_filters
 import rospy
 import pandas as pd
 from shapely.geometry import *
 from people_msgs.msg import People
 import tf
-import pathlib
 
 
 FILENAME = str(rospy.get_param("/tiago_data_handler/bagname"))
@@ -175,7 +175,7 @@ class DataHandler():
         self.sub_torso_state = message_filters.Subscriber('/torso_controller/state', JointTrajectoryControllerState)
         
         # Base subscriber
-        self.sub_cmd_vel = message_filters.Subscriber('/mobile_base_controller/cmd_vel', Twist)
+        self.sub_odom = message_filters.Subscriber('/mobile_base_controller/odom', Odometry)
                 
         # Robot pose subscriber
         self.sub_robot_pos = message_filters.Subscriber('/robot_pose', PoseWithCovarianceStamped)
@@ -186,11 +186,12 @@ class DataHandler():
         # Init synchronizer and assigning a callback 
         self.ats = message_filters.ApproximateTimeSynchronizer([self.sub_head_state, 
                                                                 self.sub_torso_state, 
-                                                                self.sub_cmd_vel, 
+                                                                self.sub_odom, 
                                                                 self.sub_robot_pos, 
                                                                 self.sub_person_pos], 
                                                                 queue_size = 100, slop = 1,
                                                                 allow_headerless = True)
+
         self.ats.registerCallback(self.cb_handle_data)
         
         
@@ -217,14 +218,14 @@ class DataHandler():
                 if p.name not in self.people_dict:
                     self.people_dict[p.name] = pd.DataFrame(columns=["h_x", "h_y", "h_v", "h_theta"])
                 self.people_dict[p.name].loc[index] = {"h_x": p.position.x,
-                                                       "h_y": p.position.y,
-                                                       "h_v": vel,
-                                                       "h_theta": theta}
+                                                    "h_y": p.position.y,
+                                                    "h_v": vel,
+                                                    "h_theta": theta}
                 
                 
     def cb_handle_data(self, head_state: JointTrajectoryControllerState, 
                              torso_state: JointTrajectoryControllerState, 
-                             robot_vel: Twist, 
+                             robot_odom: Odometry, 
                              robot_pose: PoseWithCovarianceStamped,
                              people: People):
         """
@@ -233,11 +234,11 @@ class DataHandler():
         Args:
             head_state (JointTrajectoryControllerState): robot head state
             torso_state (JointTrajectoryControllerState): robot torso state
-            robot_vel (Twist): robot base velocity
+            robot_odom (Odometry): robot odometry
             robot_pose (PoseWithCovarianceStamped): robot pose
             people (People): tracked people
         """
-        
+
         # Robot 2D pose (x, y, theta)
         r_x, r_y, r_theta = get_2DPose(robot_pose)
         
@@ -249,8 +250,8 @@ class DataHandler():
         torso_vel = torso_state.actual.velocities[0]
         
         # Base linear & angular velocity
-        base_vel = robot_vel.linear.x
-        base_ang_vel = robot_vel.angular.z
+        base_vel = robot_odom.twist.twist.linear.x
+        base_ang_vel = robot_odom.twist.twist.angular.z
         
         # Distance Robot-current_goal & time to reach current_goal
         d_rg = math.dist([r_x, r_y], [GOAL[0], GOAL[1]])
@@ -271,9 +272,6 @@ class DataHandler():
 
 if __name__ == '__main__':
     os.makedirs(DATAPATH, exist_ok=True)
-
-    # if not os.path.exists(DATAPATH):
-    #     os.mkdir(DATAPATH)
         
     # Init node
     rospy.init_node(NODE_NAME)
@@ -287,7 +285,7 @@ if __name__ == '__main__':
     data_handler = DataHandler()
         
     rospy.spin()
-            
+    print(data_handler.people_dict) 
     if data_handler.people_dict:
         # FIXME: this take the tracked person with longest time-series. 
         # It should be changed to take the correct person. 

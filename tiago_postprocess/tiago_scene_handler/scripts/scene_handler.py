@@ -27,7 +27,7 @@ class SceneHandler():
         self.count = 0
         
         # Image subscriber
-        self.sub_person_pos = rospy.Subscriber("/camera/color/image_raw", Image, self.cb_image_handler, callback_args=0)
+        self.sub_person_pos = rospy.Subscriber("/camera/color/image_raw", Image, self.cb_image_handler)
         
         
     def cb_image_handler(self, data):
@@ -51,4 +51,4 @@ if __name__ == '__main__':
         pass
 
 # Convert the video to MP4 using FFmpeg
-os.system(f'ffmpeg -i {VIDEOPATH} -vcodec libx264 -crf 25 -y {VIDEOPATH}.mp4')
+# os.system(f'ffmpeg -i {VIDEOPATH} -vcodec libx264 -crf 25 -y {VIDEOPATH}.mp4')

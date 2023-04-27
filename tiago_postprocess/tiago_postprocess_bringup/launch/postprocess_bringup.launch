@@ -17,12 +17,12 @@
   <!-- rosbags play -->
   <param name="use_sim_time" value="true" />
   <node name="rosbag_play_data" pkg="rosbag" type="play" 
-        args="--clock $(find tiago_postprocess_bringup)/bags/$(arg bagname).bag" />
+        args="--clock $(find tiago_postprocess_bringup)/bags/$(arg bagname).bag" required="true"/>
   <node name="rosbag_play_scene" pkg="rosbag" type="play" 
         args="$(find tiago_postprocess_bringup)/bags/$(arg bagname)_scene.bag" />
 
   <!-- Bayes Tracker -->
-  <include file="$(find tiago_tracker_bringup)/launch/tiago_tracker.launch"/>
+  <include file="$(find tiago_tracker_bringup)/launch/tiago_tracker.launch" />
 
   <!-- Data handler pkg -->
   <node name="tiago_data_handler" pkg="tiago_data_handler" type="data_handler.py" output="screen">
