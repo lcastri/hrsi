@@ -17,9 +17,9 @@
   <!-- rosbags play -->
   <param name="use_sim_time" value="true" />
   <node name="rosbag_play_data" pkg="rosbag" type="play" 
-        args="--clock $(find tiago_postprocess_bringup)/bags/$(arg bagname).bag" required="true" />
+        args="--clock $(find tiago_postprocess_bringup)/bags/$(arg bagname).bag" />
   <node name="rosbag_play_scene" pkg="rosbag" type="play" 
-        args="$(find tiago_postprocess_bringup)/bags/$(arg bagname)_scene.bag" required="true" />
+        args="$(find tiago_postprocess_bringup)/bags/$(arg bagname)_scene.bag" />
 
   <!-- Bayes Tracker -->
   <include file="$(find tiago_tracker_bringup)/launch/tiago_tracker.launch"/>
