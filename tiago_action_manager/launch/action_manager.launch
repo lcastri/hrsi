@@ -4,10 +4,10 @@
     <arg name="config_topics"   default="$(find twist_mux)/config/twist_mux_topics.yaml" />
 
     <!-- Killing twist_mux and twist_marker  -->
-    <!-- <node name="killer" pkg="tiago_action_manager" type="killer.sh" /> -->
+    <node name="killer" pkg="tiago_action_manager" type="killer.sh" />
 
     <!-- Relaunching twist_mux and twist_marker  -->
-    <!-- <node name="twist_mux" pkg="twist_mux" type="twist_mux" output="screen" launch-prefix="bash -c 'sleep 10; $0 $@' ">
+    <node name="twist_mux" pkg="twist_mux" type="twist_mux" output="screen" launch-prefix="bash -c 'sleep 10; $0 $@' ">
         <remap from="cmd_vel_out"     to="/mobile_base_controller/tmp_cmd_vel"/>
         <rosparam file="$(arg config_locks)"    command="load"/>
         <rosparam file="$(arg config_topics)"    command="load"/>
@@ -16,29 +16,11 @@
     <node name="twist_marker" pkg="twist_mux" type="twist_marker" output="screen" launch-prefix="bash -c 'sleep 10; $0 $@' ">
         <remap from="twist"     to="/mobile_base_controller/tmp_cmd_vel"/>
         <remap from="marker"     to="twist_marker"/>
-    </node> -->
-
-    <!-- Launching action_manager node  -->
-    <!-- <node name="tiago_action_manager" pkg="tiago_action_manager" type="action_manager.py" output="screen" launch-prefix="bash -c 'sleep 10; $0 $@' ">
-        <param name="scaling_factor" value="$(arg scaling_factor)" /> 
-    </node> -->
-
-    <!-- Killing twist_mux and twist_marker  -->
-    <node name="killer" pkg="tiago_action_manager" type="killer.sh" launch-prefix="xterm -e"/>
-
-    <!-- Relaunching twist_mux and twist_marker  -->
-    <node name="twist_mux" pkg="twist_mux" type="twist_mux" output="screen" depends-on="killer" >
-        <remap from="cmd_vel_out"     to="/mobile_base_controller/tmp_cmd_vel"/>
-        <rosparam file="$(arg config_locks)"    command="load"/>
-        <rosparam file="$(arg config_topics)"    command="load"/>
-    </node>
-    <node name="twist_marker" pkg="twist_mux" type="twist_marker" output="screen" depends-on="killer" >
-        <remap from="twist"     to="/mobile_base_controller/tmp_cmd_vel"/>
-        <remap from="marker"     to="twist_marker"/>
     </node>
 
     <!-- Launching action_manager node  -->
-    <node name="tiago_action_manager" pkg="tiago_action_manager" type="action_manager.py" output="screen" depends-on="killer" >
+    <node name="tiago_action_manager" pkg="tiago_action_manager" type="action_manager.py" output="screen" launch-prefix="bash -c 'sleep 10; $0 $@' ">
         <param name="scaling_factor" value="$(arg scaling_factor)" /> 
     </node>
+
 </launch>

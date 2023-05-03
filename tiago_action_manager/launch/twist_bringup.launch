@@ -1,0 +1,18 @@
+<launch>
+    <arg name="config_locks"    default="$(find twist_mux)/config/twist_mux_locks.yaml" />
+    <arg name="config_topics"   default="$(find twist_mux)/config/twist_mux_topics.yaml" />
+
+    <!-- Launching twist_mux  -->
+    <node name="twist_mux" pkg="twist_mux" type="twist_mux" output="screen" >
+        <remap from="cmd_vel_out"     to="/mobile_base_controller/cmd_vel"/>
+        <rosparam file="$(arg config_locks)"    command="load"/>
+        <rosparam file="$(arg config_topics)"    command="load"/>
+    </node>
+
+    <!-- Launching twist_marker  -->
+    <node name="twist_marker" pkg="twist_mux" type="twist_marker" output="screen" >
+        <remap from="twist"     to="/mobile_base_controller/cmd_vel"/>
+        <remap from="marker"     to="twist_marker"/>
+    </node>
+
+</launch>

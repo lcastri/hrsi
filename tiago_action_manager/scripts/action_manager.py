@@ -4,9 +4,9 @@ import math
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from control_msgs.msg import JointTrajectoryControllerState
 from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped
+from sensor_msgs.msg import LaserScan
 from std_msgs.msg import String
 import rospy
-# from constants import *
 from enum import Enum
 
 
@@ -44,8 +44,27 @@ J_TORSO_TARGETTIME = 1.5
 
 DIST_THRES = 2
 
-
 SCALING_FACTOR = float(rospy.get_param('/tiago_action_manager/scaling_factor'))
+
+POINT_X = PoseStamped()
+POINT_X.header.frame_id = "map"
+POINT_X.pose.position.x = 2.232
+POINT_X.pose.position.y = -1.568
+POINT_X.pose.position.z = 0.0
+POINT_X.pose.orientation.x = 0.0
+POINT_X.pose.orientation.y = 0.0
+POINT_X.pose.orientation.z = 0.707
+POINT_X.pose.orientation.w = 0.707
+            
+POINT_Y = PoseStamped()
+POINT_Y.header.frame_id = "map"
+POINT_Y.pose.position.x = 2.250
+POINT_Y.pose.position.y = 4.939
+POINT_Y.pose.position.z = 0.0
+POINT_Y.pose.orientation.x = 0.0
+POINT_Y.pose.orientation.y = 0.0
+POINT_Y.pose.orientation.z = -0.707
+POINT_Y.pose.orientation.w = 0.707
 
 
 def create_torso_msg(where: torso_movements) -> JointTrajectory:
@@ -172,8 +191,41 @@ class ActionController():
         self.sub_goal = rospy.Subscriber('/move_base/current_goal', PoseStamped, self.cb_goal)
         self.sub_robot_pos = rospy.Subscriber('/robot_pose', PoseWithCovarianceStamped, self.cb_robot_pos)
         self.pub_goal = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size = 10)
+        
+        # Laser scan subscriber
+        rospy.Subscriber('/scan', LaserScan, self.cb_closest_wall)
+
     
     
+    def cb_closest_wall(self, msg : LaserScan):
+        """
+        _summary_
+
+        Args:
+            msg (LaserScan): _description_
+        """
+        self.closest_wall = PoseStamped()
+        
+        # Find the minimum range and angle of the laser scan data
+        min_range = min(msg.ranges)
+        min_range_idx = msg.ranges.index(min_range)
+        min_range_angle = msg.angle_min + min_range_idx * msg.angle_increment
+        
+        # Calculate the x,y coordinates of the closest wall in the map frame
+        wall_x = self.robot_pose.position.x + min_range * math.cos(min_range_angle)
+        wall_y = self.robot_pose.position.y + min_range * math.sin(min_range_angle)
+        
+        # Building the goal with the closest wall cordinates
+        self.closest_wall.header.frame_id = "map"
+        self.closest_wall.pose.position.x = wall_x
+        self.closest_wall.pose.position.y = wall_y
+        self.closest_wall.pose.position.z = 0.0
+        self.closest_wall.pose.orientation.x = self.robot_pose.orientation.x
+        self.closest_wall.pose.orientation.y = self.robot_pose.orientation.y
+        self.closest_wall.pose.orientation.z = self.robot_pose.orientation.z
+        self.closest_wall.pose.orientation.w = self.robot_pose.orientation.w
+        
+
     def cb_goal(self, msg : PoseStamped):
         """
         Callback for the Subscriber "sub_goal"
@@ -191,9 +243,9 @@ class ActionController():
         Args:
             msg (PoseWithCovarianceStamped): Robot current pose [map frame]
         """
-        self.robot_pose = msg.pose.pose.position
+        self.robot_pose = msg.pose.pose
         if self.goal is not None:
-            self.robot_goal_distance = math.sqrt((self.robot_pose.x - self.goal.x)**2 + (self.robot_pose.y - self.goal.y)**2)
+            self.robot_goal_distance = math.sqrt((self.robot_pose.position.x - self.goal.x)**2 + (self.robot_pose.position.y - self.goal.y)**2)
         
         
     def cb_action_listener(self, key_action):
@@ -231,29 +283,17 @@ class ActionController():
         elif key_action.data == 'e':
             self.scaling_factor = -SCALING_FACTOR
             
+        elif key_action.data == 'f':
+            previous_goal = self.goal
+            self.pub_goal.publish(self.closest_wall)
+            while self.robot_goal_distance > 0.15: rospy.sleep(0.1)
+            self.pub_goal.publish(previous_goal)
+
         elif key_action.data == 'x':
-            point_X = PoseStamped()
-            point_X.header.frame_id = "map"
-            point_X.pose.position.x = -0.945
-            point_X.pose.position.y = 4.376
-            point_X.pose.position.z = 0.0
-            point_X.pose.orientation.x = 0.0
-            point_X.pose.orientation.y = 0.0
-            point_X.pose.orientation.z = 0.171
-            point_X.pose.orientation.w = 0.985
-            self.pub_goal.publish(point_X)
+            self.pub_goal.publish(POINT_X)
             
         elif key_action.data == 'y':
-            point_Y = PoseStamped()
-            point_Y.header.frame_id = "map"
-            point_Y.pose.position.x = 5.531
-            point_Y.pose.position.y = 6.961
-            point_Y.pose.position.z = 0
-            point_Y.pose.orientation.x = 0
-            point_Y.pose.orientation.y = 0
-            point_Y.pose.orientation.z = -0.985
-            point_Y.pose.orientation.w = 0.170
-            self.pub_goal.publish(point_Y)
+            self.pub_goal.publish(POINT_Y)
 
         
     def cb_head_state(self, msg):
