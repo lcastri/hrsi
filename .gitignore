@@ -357,3 +357,5 @@ MigrationBackup/
 *.json
 *.jar
 *.bag
+*.mp4
+*.jpg
