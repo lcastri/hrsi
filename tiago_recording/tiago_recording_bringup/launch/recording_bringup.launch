@@ -3,7 +3,7 @@
   <arg name="bagname" />
 
   <machine name="TIAGo" user="pal" address="tiago-29c" default="true" />
-  <machine name="local" user="lcastri" address="pop-os" default="true" />
+  <machine name="local" user="lcastri" address="luca-castri" default="true" />
 
   <node name="rosbag_record_data" pkg="rosbag" type="record" machine="TIAGo"
       args="record -O $(arg bagname).bag

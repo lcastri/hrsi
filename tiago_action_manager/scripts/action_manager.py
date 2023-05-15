@@ -48,8 +48,8 @@ SCALING_FACTOR = float(rospy.get_param('/tiago_action_manager/scaling_factor'))
 
 POINT_X = PoseStamped()
 POINT_X.header.frame_id = "map"
-POINT_X.pose.position.x = 2.232
-POINT_X.pose.position.y = -1.568
+POINT_X.pose.position.x = 2.575
+POINT_X.pose.position.y = -1.604
 POINT_X.pose.position.z = 0.0
 POINT_X.pose.orientation.x = 0.0
 POINT_X.pose.orientation.y = 0.0
@@ -58,8 +58,8 @@ POINT_X.pose.orientation.w = 0.707
             
 POINT_Y = PoseStamped()
 POINT_Y.header.frame_id = "map"
-POINT_Y.pose.position.x = 2.250
-POINT_Y.pose.position.y = 4.939
+POINT_Y.pose.position.x = 2.575
+POINT_Y.pose.position.y = 5.000
 POINT_Y.pose.position.z = 0.0
 POINT_Y.pose.orientation.x = 0.0
 POINT_Y.pose.orientation.y = 0.0
@@ -171,6 +171,7 @@ class ActionController():
         self.scaling_factor = 0.0
         self.goal = None
         self.robot_goal_distance = float("inf")
+        self.robot_pose = None
 
         # Head subscribers & publishers
         self.pub_head_action = rospy.Publisher('/head_controller/command', JointTrajectory, queue_size = 10)
@@ -195,6 +196,27 @@ class ActionController():
         # Laser scan subscriber
         rospy.Subscriber('/scan', LaserScan, self.cb_closest_wall)
 
+
+    def build_wall_goal(self):
+
+        if self.goal.position.y > 0:
+            wall_y = self.robot_pose.position.y + 0.75
+        else:
+            wall_y = self.robot_pose.position.y - 0.75
+
+        closest_wall = PoseStamped()
+
+        # Building the goal with the closest wall cordinates
+        closest_wall.header.frame_id = "map"
+        closest_wall.pose.position.x = self.wall_x
+        closest_wall.pose.position.y = wall_y
+        closest_wall.pose.position.z = 0.0
+        closest_wall.pose.orientation.x = self.robot_pose.orientation.x
+        closest_wall.pose.orientation.y = self.robot_pose.orientation.y
+        closest_wall.pose.orientation.z = self.robot_pose.orientation.z
+        closest_wall.pose.orientation.w = self.robot_pose.orientation.w
+        return closest_wall
+
     
     
     def cb_closest_wall(self, msg : LaserScan):
@@ -204,26 +226,16 @@ class ActionController():
         Args:
             msg (LaserScan): _description_
         """
-        self.closest_wall = PoseStamped()
+
+        if self.robot_pose is not None:
         
-        # Find the minimum range and angle of the laser scan data
-        min_range = min(msg.ranges)
-        min_range_idx = msg.ranges.index(min_range)
-        min_range_angle = msg.angle_min + min_range_idx * msg.angle_increment
-        
-        # Calculate the x,y coordinates of the closest wall in the map frame
-        wall_x = self.robot_pose.position.x + min_range * math.cos(min_range_angle)
-        wall_y = self.robot_pose.position.y + min_range * math.sin(min_range_angle)
-        
-        # Building the goal with the closest wall cordinates
-        self.closest_wall.header.frame_id = "map"
-        self.closest_wall.pose.position.x = wall_x
-        self.closest_wall.pose.position.y = wall_y
-        self.closest_wall.pose.position.z = 0.0
-        self.closest_wall.pose.orientation.x = self.robot_pose.orientation.x
-        self.closest_wall.pose.orientation.y = self.robot_pose.orientation.y
-        self.closest_wall.pose.orientation.z = self.robot_pose.orientation.z
-        self.closest_wall.pose.orientation.w = self.robot_pose.orientation.w
+            # Find the minimum range and angle of the laser scan data
+            min_range = min(msg.ranges)
+            min_range_idx = msg.ranges.index(min_range)
+            min_range_angle = msg.angle_min + min_range_idx * msg.angle_increment
+            
+            # Calculate the x,y coordinates of the closest wall in the map frame
+            self.wall_x = self.robot_pose.position.x + min_range * math.cos(min_range_angle)
         
 
     def cb_goal(self, msg : PoseStamped):
@@ -233,7 +245,7 @@ class ActionController():
         Args:
             msg (PoseStamped): Robot current goal [map frame]
         """
-        self.goal = msg.pose.position
+        self.goal = msg.pose
         
         
     def cb_robot_pos(self, msg : PoseWithCovarianceStamped):
@@ -245,7 +257,7 @@ class ActionController():
         """
         self.robot_pose = msg.pose.pose
         if self.goal is not None:
-            self.robot_goal_distance = math.sqrt((self.robot_pose.position.x - self.goal.x)**2 + (self.robot_pose.position.y - self.goal.y)**2)
+            self.robot_goal_distance = math.sqrt((self.robot_pose.position.x - self.goal.position.x)**2 + (self.robot_pose.position.y - self.goal.position.y)**2)
         
         
     def cb_action_listener(self, key_action):
@@ -284,15 +296,24 @@ class ActionController():
             self.scaling_factor = -SCALING_FACTOR
             
         elif key_action.data == 'f':
-            previous_goal = self.goal
-            self.pub_goal.publish(self.closest_wall)
-            while self.robot_goal_distance > 0.15: rospy.sleep(0.1)
-            self.pub_goal.publish(previous_goal)
+            print("PREVIOUS GOAL")
+            print(self.current_goal)
+
+            print("CLOSEST WALL")
+            closest_wall = self.build_wall_goal()
+            print(closest_wall)
+
+            self.pub_goal.publish(closest_wall)
+            while self.robot_goal_distance > 0.1: rospy.sleep(0.1)
+            print("CLOSEST WALL reached")
+            self.pub_goal.publish(self.current_goal)
 
         elif key_action.data == 'x':
+            self.current_goal = POINT_X
             self.pub_goal.publish(POINT_X)
             
         elif key_action.data == 'y':
+            self.current_goal = POINT_Y
             self.pub_goal.publish(POINT_Y)
 
         

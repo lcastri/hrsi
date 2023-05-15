@@ -21,8 +21,8 @@ NODE_RATE = 100 #Hz
 
 
 class Goal(Enum):
-    X = (-0.945, 4.376)
-    Y = (5.531, 6.961)
+    X = (2.575, -1.604)
+    Y = (2.575, 5.000)
     
 GOAL = None
 
@@ -214,13 +214,13 @@ class DataHandler():
             #     theta += 2*math.pi
             
             # Position
-            if vel >= 0.75:
+            if vel >= 0.75 and vel <= 2.00:
                 if p.name not in self.people_dict:
                     self.people_dict[p.name] = pd.DataFrame(columns=["h_x", "h_y", "h_v", "h_theta"])
                 self.people_dict[p.name].loc[index] = {"h_x": p.position.x,
-                                                    "h_y": p.position.y,
-                                                    "h_v": vel,
-                                                    "h_theta": theta}
+                                                       "h_y": p.position.y,
+                                                       "h_v": vel,
+                                                       "h_theta": theta}
                 
                 
     def cb_handle_data(self, head_state: JointTrajectoryControllerState, 
@@ -285,7 +285,6 @@ if __name__ == '__main__':
     data_handler = DataHandler()
         
     rospy.spin()
-    print(data_handler.people_dict) 
     if data_handler.people_dict:
         # FIXME: this take the tracked person with longest time-series. 
         # It should be changed to take the correct person. 
@@ -293,6 +292,7 @@ if __name__ == '__main__':
         for p in data_handler.people_dict:
             len_tmp[p] = len(data_handler.people_dict[p])
         p = max(len_tmp, key=len_tmp.get)
+        print("PERSON ID: ", p)
         ###############################################################
             
         df_complete = pd.concat([data_handler.df_robot, data_handler.people_dict[p]], axis = 1)
