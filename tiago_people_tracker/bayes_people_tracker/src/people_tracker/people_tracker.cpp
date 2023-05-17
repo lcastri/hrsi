@@ -177,6 +177,17 @@ void PeopleTracker::parseParams(ros::NodeHandle n) {
   }
 }
 
+
+std::vector<std::string> convert_to_string(const std::vector<long>& uuids) {
+    std::vector<std::string> uuid_strings;
+    for (long uuid : uuids) {
+        std::string uuid_string = std::to_string(uuid);
+        uuid_strings.push_back(uuid_string);
+    }
+    return uuid_strings;
+}
+
+
 void PeopleTracker::trackingThread() {
   ros::Rate fps(tracker_frequency);
   double time_sec = 0.0;
@@ -198,7 +209,8 @@ void PeopleTracker::trackingThread() {
       std::vector<geometry_msgs::Pose> poses;
       std::vector<geometry_msgs::Pose> vels;
       std::vector<geometry_msgs::Pose> vars;
-      std::vector<std::string> uuids;
+      std::vector<long> uuids; 	// [LUCA]
+      // [LUCA] std::vector<std::string> uuids;
       std::vector<long> pids;
       std::vector<double> distances;
       std::vector<double> angles;
@@ -209,7 +221,10 @@ void PeopleTracker::trackingThread() {
 	poses.push_back(it->second[0]);
 	vels.push_back(it->second[1]);
 	vars.push_back(it->second[2]);
-	uuids.push_back(generateUUID(startup_time_str, it->first));
+  // [LUCA] ROS_WARN_STREAM("id : " << it->first);
+  // [LUCA] ROS_WARN_STREAM("uuid : " << generateUUID(startup_time_str, it->first));
+	// [LUCA] uuids.push_back(generateUUID(startup_time_str, it->first));
+	uuids.push_back(it->first); 	// [LUCA]
 	pids.push_back(it->first);
 	
 	geometry_msgs::PoseStamped poseInRobotCoords;
@@ -243,7 +258,8 @@ void PeopleTracker::trackingThread() {
       }
       
       if(pub_detect.getNumSubscribers() || pub_pose.getNumSubscribers() || pub_pose_array.getNumSubscribers() || pub_people.getNumSubscribers())
-	publishDetections(time_sec, closest_person_point, poses, vels, uuids, distances, angles, min_dist, angle);
+	// [LUCA] publishDetections(time_sec, closest_person_point, poses, vels, pids, distances, angles, min_dist, angle);
+	publishDetections(time_sec, closest_person_point, poses, vels, convert_to_string(uuids), distances, angles, min_dist, angle);	// [LUCA]
       
       if(pub_marker.getNumSubscribers())
 	createVisualisation(poses, pids, pub_marker);
@@ -406,9 +422,9 @@ void PeopleTracker::createVisualisation(std::vector<geometry_msgs::Pose> poses,
     geometry_msgs::Point p;
     for(int j = 0; j < previous_poses.size(); j++) {
       if(boost::get<0>(previous_poses[j]) == pids[i]) {
-	p.x = boost::get<3>(previous_poses[j]).position.x;
-	p.y = boost::get<3>(previous_poses[j]).position.y;
-	tracking_tr.points.push_back(p);
+        p.x = boost::get<3>(previous_poses[j]).position.x;
+        p.y = boost::get<3>(previous_poses[j]).position.y;
+        tracking_tr.points.push_back(p);
       }
     }
     tracking_tr.scale.x = 0.1;

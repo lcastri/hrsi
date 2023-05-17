@@ -3,6 +3,9 @@
 from enum import Enum
 import math
 import os
+import random
+
+import numpy as np
 from control_msgs.msg import JointTrajectoryControllerState
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
@@ -25,6 +28,23 @@ class Goal(Enum):
     Y = (2.575, 5.000)
     
 GOAL = None
+
+
+def fill_missings(df: pd.DataFrame):
+    """
+    Fills missing values of the Dataframe
+
+    Args:
+        df (pd.DataFrame): complete DataFrame (robot + human)
+
+    Returns:
+        pd.DataFrame: DataFrame with no NaNs
+    """
+    df['h_x'] = df['h_x'].ffill().bfill()
+    df['h_y'] = df['h_y'].ffill().bfill()
+    df['h_theta'] = df['h_theta'].ffill().bfill()
+    df['h_v'] = df['h_v'].apply(lambda l: l if not np.isnan(l) else random.uniform(a=-0.03, b=0.03))
+    return df
 
 
 def get_risk(r_old_pos: tuple, h_old_pos: tuple, r_pos: tuple, h_pos: tuple, r_old_vel: float):
@@ -119,10 +139,17 @@ def postprocess(df: pd.DataFrame):
                          "theta_rg": math.atan2(GOAL[1] - df["r_y"][t], GOAL[0] - df["r_x"][t]),
                          "theta_rh": math.atan2(df["h_y"][t] - df["r_y"][t], df["h_x"][t] - df["r_x"][t]), 
                          }
-    
+        #########################################################################################FIXME: new version with only lagged dependency
+        # df_new.loc[t] = {"d_rh": math.dist([df["r_x"][t-1], df["r_y"][t-1]], [df["h_x"][t-1], df["h_y"][t-1]]),
+        #                  "risk": risk,
+        #                  "theta_rg": math.atan2(GOAL[1] - df["r_y"][t-1], GOAL[0] - df["r_x"][t-1]),
+        #                  "theta_rh": math.atan2(df["h_y"][t-1] - df["r_y"][t-1], df["h_x"][t-1] - df["r_x"][t-1]), 
+        #                  }
+        #######################################################################################################################################
+
     df_new.loc[0] =  {"d_rh": math.dist([df["r_x"][0], df["r_y"][0]], [df["h_x"][0], df["h_y"][0]]),
                       "risk": df_new["risk"][1],
-                      "theta_rg": math.atan2(GOAL[1] - df["r_y"][t], GOAL[0] - df["r_x"][t]),
+                      "theta_rg": math.atan2(GOAL[1] - df["r_y"][0], GOAL[0] - df["r_x"][0]),
                       "theta_rh": math.atan2(df["h_y"][0] - df["r_y"][0], df["h_x"][0] - df["r_x"][0]), 
                      }
                       
@@ -165,7 +192,8 @@ class DataHandler():
         Class constructor. Init publishers and subscribers
         """
         
-        self.df_robot = pd.DataFrame(columns=['g_x', 'g_y', 'r_x', 'r_y', 'r_theta', 'r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_omega', 'd_rg', 't_rg'])
+        self.df_robot = pd.DataFrame(columns=['g_x', 'g_y', 'r_x', 'r_y', 'r_theta', 'r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_omega'])
+        # self.df_robot = pd.DataFrame(columns=['g_x', 'g_y', 'r_x', 'r_y', 'r_theta', 'r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_omega', 'd_rg', 't_rg'])
         self.people_dict = dict()
         
         # Head subscriber
@@ -247,15 +275,23 @@ class DataHandler():
         head2_vel = head_state.actual.velocities[1]
         
         # Torso velocity
-        torso_vel = torso_state.actual.velocities[0]
+        torso_vel = torso_state.actual.velocities[0] + random.uniform(a=-0.02, b=0.02)
         
         # Base linear & angular velocity
         base_vel = robot_odom.twist.twist.linear.x
         base_ang_vel = robot_odom.twist.twist.angular.z
         
-        # Distance Robot-current_goal & time to reach current_goal
-        d_rg = math.dist([r_x, r_y], [GOAL[0], GOAL[1]])
-        t_rg = d_rg/(base_vel + 0.001)
+        # # Distance Robot-current_goal & time to reach current_goal
+        # d_rg = math.dist([r_x, r_y], [GOAL[0], GOAL[1]])
+        # # t_rg = d_rg/(base_vel + 0.1)
+        # #########################################################################################FIXME: new version with only lagged dependency
+        # if len(self.df_robot) != 0:
+        #     # d_rg = math.dist([self.df_robot['r_x'].loc[len(self.df_robot)-1], self.df_robot['r_y'].loc[len(self.df_robot)-1]], [GOAL[0], GOAL[1]]) 
+        #     t_rg = self.df_robot['d_rg'].loc[len(self.df_robot)-1]/(self.df_robot['r_v'].loc[len(self.df_robot)-1] + 0.1) + random.uniform(a=-0.05, b=0.05)
+        # else:
+        #     # d_rg = 0
+        #     t_rg = 0
+        # #######################################################################################################################################
         
         # appending new data row in robot Dataframe
         self.df_robot.loc[len(self.df_robot)] = {'g_x': GOAL[0], 'g_y': GOAL[1],
@@ -263,7 +299,7 @@ class DataHandler():
                                                  'r_v_h1': head1_vel, 'r_v_h2': head2_vel, 
                                                  'r_v_t': torso_vel, 
                                                  'r_v': base_vel, 'r_omega': base_ang_vel,
-                                                 'd_rg': d_rg, 't_rg': t_rg,
+                                                #  'd_rg': d_rg, 't_rg': t_rg,
                                                  }
         
         self.people_handler(people.people, len(self.df_robot))      
@@ -292,15 +328,26 @@ if __name__ == '__main__':
         for p in data_handler.people_dict:
             len_tmp[p] = len(data_handler.people_dict[p])
         p = max(len_tmp, key=len_tmp.get)
-        print("PERSON ID: ", p)
+        rospy.logwarn("PERSON ID: %s"%p)
         ###############################################################
-            
-        df_complete = pd.concat([data_handler.df_robot, data_handler.people_dict[p]], axis = 1)
-        df_complete = df_complete.ffill().bfill()
         
-        df_final = postprocess(df_complete)
-        df_final.to_csv(DATAPATH + "/" + FILENAME + "_complete.csv")
-        df_final.to_csv(DATAPATH + "/" + FILENAME + "_causal.csv", columns=['r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_theta',
-                                                                            'd_rg', 't_rg', 'theta_rg',
-                                                                            'h_v', 'h_theta', 
-                                                                            'risk', 'd_rh', 'theta_rh'])
+        #########################################################################################FIXME: new version with only lagged dependency
+        # data_handler.df_robot['d_rg'].loc[0] = data_handler.df_robot['d_rg'].loc[1]
+        # data_handler.df_robot['t_rg'].loc[0] = data_handler.df_robot['t_rg'].loc[1]
+        #######################################################################################################################################
+        df_complete = pd.concat([data_handler.df_robot, data_handler.people_dict[p]], axis = 1)
+        df_complete = fill_missings(df_complete)
+        df_complete.to_csv(DATAPATH + "/" + FILENAME + "_raw.csv")
+        
+        # df_final = postprocess(df_complete)
+        # df_final.to_csv(DATAPATH + "/" + FILENAME + "_complete.csv")
+        # df_final.to_csv(DATAPATH + "/" + FILENAME + "_causal.csv", columns=['r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_theta',
+        #                                                                     'd_rg', 't_rg', 'theta_rg',
+        #                                                                     'h_v', 'h_theta', 
+        #                                                                     'risk', 'd_rh', 'theta_rh'])
+        # df_final.to_csv(DATAPATH + "/" + FILENAME + "_causal_notheta.csv", columns=['r_v_h1', 'r_v_h2', 'r_v_t', 'r_v',
+        #                                                                             'd_rg', 't_rg',
+        #                                                                             'h_v', 
+        #                                                                             'risk', 'd_rh'])
+        # df_final.to_csv(DATAPATH + "/" + FILENAME + "_causal_reduced.csv", columns=['r_v_h1', 'r_v_h2', 'r_v_t', 'r_v',
+        #                                                                             'd_rg', 'h_v', 'risk', 'd_rh'])
