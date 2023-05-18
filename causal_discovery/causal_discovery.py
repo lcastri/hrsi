@@ -7,14 +7,13 @@ from fpcmci.basics.constants import LabelType
 from time import time
 from datetime import timedelta
 import pandas as pd
-import numpy as np
 
 DATA_PATH = r'/home/lucacastri/Git/tiago_ws/src/hrsi/tiago_postprocess/tiago_postprocess_bringup/data'
 NUM_DATASET = 16
 # NUM_DATASET = 26
 ACTOR = "greta"
 # INTERVENTION = "noaction"
-INTERVENTION = "decrease"
+INTERVENTION = ["decrease","increase"]
 # INTERVENTION = "increase"
 # INTERVENTION = "vel"
 FILE_EXT = ".csv"
@@ -24,7 +23,7 @@ FILE_EXT = ".csv"
 
 if __name__ == '__main__':
     # all_files = [DATA_PATH + "/" + ACTOR + "_" + INTERVENTION + "_" + str(i) + "_causal" + FILE_EXT for i in range(NUM_DATASET)]
-    all_files = [DATA_PATH + "/" + ACTOR + "_" + INTERVENTION + "_" + str(i) + "_causal_notheta" + FILE_EXT for i in range(NUM_DATASET)]
+    all_files = [DATA_PATH + "/" + ACTOR + "_" + i + "_" + str(d) + "_causal_notheta" + FILE_EXT for i in INTERVENTION for d in range(NUM_DATASET)]
     # all_files = [DATA_PATH + "/" + ACTOR + "_" + INTERVENTION + "_" + str(i) + "_causal_reduced" + FILE_EXT for i in range(NUM_DATASET)]
     
     # FIXME: to use when ACTION == increase
@@ -48,7 +47,7 @@ if __name__ == '__main__':
     frame = pd.concat(li, axis = 0, ignore_index = True)
     
     f_alpha = 0.05
-    pcmci_alpha = 0.05
+    pcmci_alpha = 0.01
     min_lag = 1
     max_lag = 1
     
@@ -64,7 +63,7 @@ if __name__ == '__main__':
                     val_condtest = GPDC(significance = 'analytic', gp_params = None),
                     verbosity = CPLevel.DEBUG,
                     neglect_only_autodep = True,
-                    resfolder = ACTOR + "_" + INTERVENTION)
+                    resfolder = ACTOR + "_" + "_".join(INTERVENTION))
     
     fpcmci_res, causal_model = fpcmci.run()
     elapsed_FPCMCI = time() - start
