@@ -8,36 +8,33 @@ from time import time
 from datetime import timedelta
 import pandas as pd
 
-DATA_PATH = r'/home/lucacastri/Git/tiago_ws/src/hrsi/tiago_postprocess/tiago_postprocess_bringup/data'
+
+DATA_PATH = r'/home/lucacastri/git/tiago_ws/src/hrsi/tiago_postprocess/tiago_postprocess_bringup/data'
 NUM_DATASET = 16
-# NUM_DATASET = 26
 ACTOR = "greta"
-# INTERVENTION = "noaction"
-INTERVENTION = ["decrease","increase"]
-# INTERVENTION = "increase"
-# INTERVENTION = "vel"
+INTERVENTION = ["decrease"]
 FILE_EXT = ".csv"
 
 
-
-
 if __name__ == '__main__':
-    # all_files = [DATA_PATH + "/" + ACTOR + "_" + INTERVENTION + "_" + str(i) + "_causal" + FILE_EXT for i in range(NUM_DATASET)]
-    all_files = [DATA_PATH + "/" + ACTOR + "_" + i + "_" + str(d) + "_causal_notheta" + FILE_EXT for i in INTERVENTION for d in range(NUM_DATASET)]
-    # all_files = [DATA_PATH + "/" + ACTOR + "_" + INTERVENTION + "_" + str(i) + "_causal_reduced" + FILE_EXT for i in range(NUM_DATASET)]
     
-    # FIXME: to use when ACTION == increase
-    # NUM_DATASET = [0,2,3,5,6,9,10,11,13,14]
-    # all_files = [DATA_PATH + "/" + ACTOR + "_" + INTERVENTION + "_" + str(i) + "_causal_notheta" + FILE_EXT for i in NUM_DATASET]
-    # all_files = [DATA_PATH + "/" + ACTOR + "_" + INTERVENTION + "_" + str(i) + "_causal_reduced" + FILE_EXT for i in NUM_DATASET]
-
     li = []
     # FIXME: to use with the complete csv
+    # all_files = [DATA_PATH + "/" + ACTOR + "_" + INTERVENTION + "_" + str(i) + "_causal" + FILE_EXT for i in range(NUM_DATASET)]
     # colnames = [r"r_{vh1}", r"r_{vh2}", r"r_{vt}", r"r_v", r"r_{\theta}", r"d_{rg}", r"t_{rg}", r"\theta_{rg}", r"h_v", r"h_{theta}", r"risk", r"d_{rh}", r"\theta_{rh}"] 
+    
+    # FIXME: to use with the onlyorient csv
+    # all_files = [DATA_PATH + "/" + ACTOR + "_" + i + "_" + str(d) + "_causal_onlyorient" + FILE_EXT for i in INTERVENTION for d in range(NUM_DATASET)]
+    # colnames = [r"r_{vh1}", r"r_{vh2}", r"r_{vt}", r"r_v", r"r_{\theta}", r"d_{rg}", r"t_{rg}", r"h_v", r"h_{\theta}", r"risk", r"d_{rh}"]
+    
     # FIXME: to use with the notheta csv
+    all_files = [DATA_PATH + "/" + ACTOR + "_" + i + "_" + str(d) + "_causal_notheta" + FILE_EXT for i in INTERVENTION for d in range(NUM_DATASET)]
     colnames = [r"r_{vh1}", r"r_{vh2}", r"r_{vt}", r"r_v", r"d_{rg}", r"t_{rg}", r"h_v", r"risk", r"d_{rh}"]
+    
     # FIXME: to use with the reduced csv
+    # all_files = [DATA_PATH + "/" + ACTOR + "_" + INTERVENTION + "_" + str(i) + "_causal_reduced" + FILE_EXT for i in range(NUM_DATASET)]
     # colnames = [r"r_{vh1}", r"r_{vh2}", r"r_{vt}", r"r_v", r"d_{rg}", r"h_v", r"risk", r"d_{rh}"]
+    
     for filename in all_files:
         try:
             df = pd.read_csv(filename, index_col = [0], names=colnames, header = 0)
@@ -46,8 +43,8 @@ if __name__ == '__main__':
             continue
     frame = pd.concat(li, axis = 0, ignore_index = True)
     
-    f_alpha = 0.05
-    pcmci_alpha = 0.01
+    f_alpha = 0.1
+    pcmci_alpha = 0.05
     min_lag = 1
     max_lag = 1
     
@@ -63,7 +60,7 @@ if __name__ == '__main__':
                     val_condtest = GPDC(significance = 'analytic', gp_params = None),
                     verbosity = CPLevel.DEBUG,
                     neglect_only_autodep = True,
-                    resfolder = ACTOR + "_" + "_".join(INTERVENTION))
+                    resfolder = ACTOR + "_" + "_".join(INTERVENTION) + "_ttc_uninoise_03trg_0175risk_05alpha_NEW")
     
     fpcmci_res, causal_model = fpcmci.run()
     elapsed_FPCMCI = time() - start
