@@ -12,7 +12,7 @@ import pandas as pd
 DATA_PATH = r'/home/lucacastri/git/tiago_ws/src/hrsi/tiago_postprocess/tiago_postprocess_bringup/data'
 NUM_DATASET = 16
 ACTOR = "greta"
-INTERVENTION = ["decrease"]
+INTERVENTION = ["noaction", "decrease", "increase"]
 FILE_EXT = ".csv"
 
 
@@ -60,7 +60,7 @@ if __name__ == '__main__':
                     val_condtest = GPDC(significance = 'analytic', gp_params = None),
                     verbosity = CPLevel.DEBUG,
                     neglect_only_autodep = True,
-                    resfolder = ACTOR + "_" + "_".join(INTERVENTION) + "_ttc_uninoise_03trg_0175risk_05alpha_NEW")
+                    resfolder = ACTOR + "_" + "_".join(INTERVENTION) + "_ttc_uninoise_03trg_0175risk_05alpha")
     
     fpcmci_res, causal_model = fpcmci.run()
     elapsed_FPCMCI = time() - start
