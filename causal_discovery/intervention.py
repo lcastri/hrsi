@@ -123,6 +123,7 @@ INTERVETION2_DATA = "increase"
 FILE_EXT = ".csv"
 
 def get_data(data):
+    li = []
     colnames = [r"r_{vh1}", r"r_{vh2}", r"r_{vt}", r"r_v", r"d_{rg}", r"t_{rg}", r"h_v", r"risk", r"d_{rh}"]
 
     files = [DATA_PATH + "/" + ACTOR + "_" + data + "_" + str(d) + "_causal_notheta" + FILE_EXT for d in range(NUM_DATASET)]
@@ -137,7 +138,6 @@ def get_data(data):
 
 if __name__ == '__main__':
     
-    li = []
     df_obs = get_data(OBSERVATION_DATA)
     df_int1 = get_data(INTERVETION1_DATA)
     df_int2 = get_data(INTERVETION2_DATA)   
@@ -146,9 +146,9 @@ if __name__ == '__main__':
                    r"t_{rg}" : 0,
                    r"risk" : 0}
     
-    true_effect[r"d_{rg}"] = (df_int1[r"d_{rg}"] - df_int2[r"d_{rg}"]).mean()
-    true_effect[r"t_{rg}"] = (df_int1[r"t_{rg}"] - df_int2[r"t_{rg}"]).mean()
-    true_effect[r"risk"] = (df_int1[r"risk"] - df_int2[r"risk"]).mean()
+    true_effect[r"d_{rg}"] = (df_int1[r"d_{rg}"] - df_int2[r"d_{rg}"]).mean(skipna=True)
+    true_effect[r"t_{rg}"] = (df_int1[r"t_{rg}"] - df_int2[r"t_{rg}"]).mean(skipna=True)
+    true_effect[r"risk"] = (df_int1[r"risk"] - df_int2[r"risk"]).mean(skipna=True)
     
     for k, v in true_effect.items(): print(str(k) + " : " + str(v))
     
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     max_lag = 1
     
     df = Data(df_obs)
-    df.plot_timeseries()
+    # df.plot_timeseries()
     start = time()
     fpcmci = FPCMCI(df, 
                     f_alpha = f_alpha,
