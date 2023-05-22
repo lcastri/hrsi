@@ -188,22 +188,32 @@ if __name__ == '__main__':
     # fpcmci.dag(label_type = LabelType.NoLabels, node_layout = 'circular', node_color = nodes_color)
     
     graph = fpcmci.validator.result['graph']
-    X = [(3, -1)]
+    X = [(2, -1)]
     # Y = [(4, 0), (5, 0), (7, 0)]
-    Y = [(7, 0)]
+    Y = [(4, 0)]
     causal_effects = CausalEffects(graph, graph_type = 'stationary_dag', X = X, Y = Y, S = None, 
                                    hidden_variables = None, 
                                    verbosity = 1)
     
-    causal_effects.fit_total_effect(dataframe = OBSERVATION_DATA, 
+    d = pp.DataFrame(df_obs.drop(columns = ['r_{vh2}']).values, var_names = list(df_obs.columns).remove('r_{vh2}'))
+    causal_effects.fit_total_effect(dataframe = d, 
                                     estimator = GaussianProcessRegressor(),
                                     adjustment_set = 'optimal',
                                     conditional_estimator = None,  
                                     data_transform = None,
                                     mask_type = None)
     
-    y1 = causal_effects.predict_total_effect(intervention_data = df_int1[r"r_v"])
-    print("y1 = ", y1)
+    int_data1 = np.reshape(np.array(df_int1[r"r_v"][:len(df_obs)]), (len(df_obs), 1))
+    y1 = causal_effects.predict_total_effect(intervention_data = int_data1)
+    t = np.arange(0, len(df_obs))
+    plt.plot(t, y1, color = 'r', label='pred')
+    plt.plot(t, df_int1[r"t_{rg}"][:len(df_obs)], color='b', label='true')
+    plt.legend()
+    plt.show()
 
-    y2 = causal_effects.predict_total_effect(intervention_data = df_int2[r"r_v"])
-    print("y2 = ", y2)
+    int_data2 = np.reshape(np.array(df_int2[r"r_v"][:len(df_obs)]), (len(df_obs), 1))
+    y2 = causal_effects.predict_total_effect(intervention_data = int_data2)
+    plt.plot(t, y2, 'r')
+    plt.plot(t, df_int2[r"t_{rg}"][:len(df_obs)], color='b', label='true')
+    plt.legend()
+    plt.show()
