@@ -361,3 +361,4 @@ MigrationBackup/
 *.jpg
 *.txt
 *.zip
+*.npy

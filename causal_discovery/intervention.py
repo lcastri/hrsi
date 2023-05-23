@@ -122,9 +122,10 @@ INTERVETION1_DATA = "decrease"
 INTERVETION2_DATA = "increase"
 FILE_EXT = ".csv"
 
+
+
 def get_data(data):
     li = []
-    colnames = [r"r_{vh1}", r"r_{vh2}", r"r_{vt}", r"r_v", r"d_{rg}", r"t_{rg}", r"h_v", r"risk", r"d_{rh}"]
 
     files = [DATA_PATH + "/" + ACTOR + "_" + data + "_" + str(d) + "_causal_notheta" + FILE_EXT for d in range(NUM_DATASET)]
     for filename in files:
@@ -137,43 +138,49 @@ def get_data(data):
 
 
 if __name__ == '__main__':
-    
-    df_obs = get_data(OBSERVATION_DATA)
-    df_int1 = get_data(INTERVETION1_DATA)
-    df_int2 = get_data(INTERVETION2_DATA)   
+    colnames = [r"r_{vh1}", r"r_{vh2}", r"r_{vt}", r"r_v", r"d_{rg}", r"t_{rg}", r"h_v", r"risk", r"d_{rh}"]
+
+    # df_obs = get_data(OBSERVATION_DATA)
+    # df_int1 = get_data(INTERVETION1_DATA)
+    df_obs = get_data(INTERVETION1_DATA)
+    df_int1 = get_data(OBSERVATION_DATA)
+    # df_int2 = get_data(INTERVETION2_DATA) 
+    # min_len = min([len(df) for df in [df_obs, df_int1, df_int2]])
+    min_len = min([len(df) for df in [df_obs, df_int1]])
+    df_obs = df_obs[0:min_len]
+    df_int1 = df_int1[0:min_len]
+    # df_int2 = df_int2[0:min_len]
     
     true_effect = {r"d_{rg}" : 0,
                    r"t_{rg}" : 0,
                    r"risk" : 0}
     
-    true_effect[r"d_{rg}"] = (df_int1[r"d_{rg}"] - df_int2[r"d_{rg}"]).mean(skipna=True)
-    true_effect[r"t_{rg}"] = (df_int1[r"t_{rg}"] - df_int2[r"t_{rg}"]).mean(skipna=True)
-    true_effect[r"risk"] = (df_int1[r"risk"] - df_int2[r"risk"]).mean(skipna=True)
+    # true_effect[r"d_{rg}"] = (df_int1[r"d_{rg}"] - df_int2[r"d_{rg}"]).mean()
+    # true_effect[r"t_{rg}"] = (df_int1[r"t_{rg}"] - df_int2[r"t_{rg}"]).mean()
+    # true_effect[r"risk"] = (df_int1[r"risk"] - df_int2[r"risk"]).mean()
+    true_effect[r"d_{rg}"] = (df_int1[r"d_{rg}"]).mean()
+    true_effect[r"t_{rg}"] = (df_int1[r"t_{rg}"]).mean()
+    true_effect[r"risk"] = (df_int1[r"risk"]).mean()
     
     for k, v in true_effect.items(): print(str(k) + " : " + str(v))
     
-    f_alpha = 0.1
-    pcmci_alpha = 0.05
-    min_lag = 1
-    max_lag = 1
+    # f_alpha = 0.1
+    # pcmci_alpha = 0.05
+    # min_lag = 1
+    # max_lag = 1
     
-    df = Data(df_obs)
-    # df.plot_timeseries()
-    start = time()
-    fpcmci = FPCMCI(df, 
-                    f_alpha = f_alpha,
-                    pcmci_alpha = pcmci_alpha,
-                    min_lag = min_lag, 
-                    max_lag = max_lag, 
-                    sel_method = TE(TEestimator.Gaussian), 
-                    val_condtest = GPDC(significance = 'analytic', gp_params = None),
-                    verbosity = CPLevel.DEBUG,
-                    neglect_only_autodep = True)
+    # df = Data(df_obs) 
+    # fpcmci = FPCMCI(df, 
+    #                 f_alpha = f_alpha,
+    #                 pcmci_alpha = pcmci_alpha,
+    #                 min_lag = min_lag, 
+    #                 max_lag = max_lag, 
+    #                 sel_method = TE(TEestimator.Gaussian), 
+    #                 val_condtest = GPDC(significance = 'analytic', gp_params = None),
+    #                 verbosity = CPLevel.DEBUG,
+    #                 neglect_only_autodep = True)
     
-    fpcmci_res, causal_model = fpcmci.run()
-    # elapsed_FPCMCI = time() - start
-    # print(str(timedelta(seconds = elapsed_FPCMCI)))
-
+    # fpcmci_res, causal_model = fpcmci.run()
     
     # colors = {r"r_{vh1}" : "orangered", 
     #           r"r_{vh2}" : "orangered", 
@@ -187,15 +194,21 @@ if __name__ == '__main__':
     # nodes_color = {'$' + key + '$': colors[key] for key in fpcmci_res}
     # fpcmci.dag(label_type = LabelType.NoLabels, node_layout = 'circular', node_color = nodes_color)
     
-    graph = fpcmci.validator.result['graph']
-    X = [(2, -1)]
-    # Y = [(4, 0), (5, 0), (7, 0)]
-    Y = [(4, 0)]
-    causal_effects = CausalEffects(graph, graph_type = 'stationary_dag', X = X, Y = Y, S = None, 
+    # graph = fpcmci.validator.result['graph']
+    # np.save('graph_dec.npy', graph)
+    # np.save('var_dec.npy', fpcmci_res)
+    
+    graph = np.load('graph_dec.npy')
+    vars = list(np.load('var_dec.npy'))
+    
+    X = [(vars.index(r"r_v"), -1)]
+    Y = [(vars.index(r"t_{rg}"), 0)]
+    S = [(vars.index(r"d_{rg}"), -1)]
+    causal_effects = CausalEffects(graph, graph_type = 'stationary_dag', X = X, Y = Y, S = S, 
                                    hidden_variables = None, 
                                    verbosity = 1)
     
-    d = pp.DataFrame(df_obs.drop(columns = ['r_{vh2}']).values, var_names = list(df_obs.columns).remove('r_{vh2}'))
+    d = pp.DataFrame(df_obs.drop(columns = list(set(colnames) - set(vars))).values, var_names = vars)
     causal_effects.fit_total_effect(dataframe = d, 
                                     estimator = GaussianProcessRegressor(),
                                     adjustment_set = 'optimal',
@@ -204,16 +217,19 @@ if __name__ == '__main__':
                                     mask_type = None)
     
     int_data1 = np.reshape(np.array(df_int1[r"r_v"][:len(df_obs)]), (len(df_obs), 1))
-    y1 = causal_effects.predict_total_effect(intervention_data = int_data1)
+    S_data1 = np.reshape(np.array(df_int1[r"d_{rg}"][:len(df_obs)]), (len(df_obs), 1))
+    y1 = causal_effects.predict_total_effect(intervention_data = int_data1, conditions_data = S_data1)
+    print("estimated t_{rg}", y1.mean())
+    
     t = np.arange(0, len(df_obs))
     plt.plot(t, y1, color = 'r', label='pred')
     plt.plot(t, df_int1[r"t_{rg}"][:len(df_obs)], color='b', label='true')
     plt.legend()
     plt.show()
 
-    int_data2 = np.reshape(np.array(df_int2[r"r_v"][:len(df_obs)]), (len(df_obs), 1))
-    y2 = causal_effects.predict_total_effect(intervention_data = int_data2)
-    plt.plot(t, y2, 'r')
-    plt.plot(t, df_int2[r"t_{rg}"][:len(df_obs)], color='b', label='true')
-    plt.legend()
-    plt.show()
+    # int_data2 = np.reshape(np.array(df_int2[r"r_v"][:len(df_obs)]), (len(df_obs), 1))
+    # y2 = causal_effects.predict_total_effect(intervention_data = int_data2)
+    # plt.plot(t, y2, 'r')
+    # plt.plot(t, df_int2[r"t_{rg}"][:len(df_obs)], color='b', label='true')
+    # plt.legend()
+    # plt.show()
