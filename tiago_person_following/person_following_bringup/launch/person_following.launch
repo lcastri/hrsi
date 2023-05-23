@@ -1,21 +1,32 @@
 <launch>
+  <!-- parameters fo person detection rosnode -->
+  <arg name="field_of_view"  default="60" />
+  <arg name="dist_threshold"  default="3" />
 
-  <!-- TIAGo 3D Object Detector -->
-  <node pkg="object3d_detector" type="object3d_detector" name="object3d_detector" output="screen" respawn="false" >
-    <param name='z_limit_min' value='-1.5'/>
-    <param name='z_limit_max' value='0.5'/>
-    <param name="model_file_name" type="string" value="$(find object3d_detector)/libsvm/pedestrian.model"/>
-    <param name="range_file_name" type="string" value="$(find object3d_detector)/libsvm/pedestrian.range"/>
-  </node>
+  <!-- parameter fo person following rosnode -->
+  <arg name="des_dist"  default="1.5" />
+
+  <!-- Machine definition -->
+  <machine name="TIAGo" user="pal" address="tiago-29c" default="true" />
+  <machine name="PC" user="lcastri" address="luca-castri" default="true" />
   
-  <!-- NBellotto's Bayes People Tracker -->
-  <rosparam command="load" file="$(find tiago_tracker_bringup)/config/detectors.yaml"/>
-  <node pkg="bayes_people_tracker" type="bayes_people_tracker" name="bayes_people_tracker" output="screen" respawn="true" >
-    <param name="base_link" type="string" value="base_link"/>
-    <param name="target_frame" type="string" value="map"/>
-  </node>
+   <!-- Bayes Tracker -->
+  <include file="$(find tiago_tracker_bringup)/launch/tiago_tracker.launch">
+    <machine name="TIAGo" />
+  </include>
   
+  <!-- Person detection rosnode -->
+  <node name="person_detection" pkg="person_detection" type="person_detection.py" machine="TIAGo" >
+    <param name="field_of_view" value="$(arg field_of_view)" /> 
+    <param name="dist_threshold" value="$(arg dist_threshold)" /> 
+  </node>
+
+  <!-- Person following rosnode -->
+  <node name="person_following" pkg="person_following" type="person_following.py" machine="TIAGo" >
+    <param name="des_dist" value="$(arg des_dist)" /> 
+  </node>
+
   <!-- rviz -->
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tiago_tracker_bringup)/launch/tiago_tracker.rviz -f map"/>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tiago_tracker_bringup)/launch/tiago_tracker.rviz -f map" machine="PC" />
 
 </launch>
