@@ -65,14 +65,8 @@ class DataHandler():
         Class constructor. Init publishers and subscribers
         """
         
-        self.df_robot = pd.DataFrame(columns=['g_x', 'g_y', 'r_x', 'r_y', 'r_theta', 'r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_omega'])
-        self.people_dict = dict()
-        
-        # Head subscriber
-        self.sub_head_state = message_filters.Subscriber("/head_controller/state", JointTrajectoryControllerState)
-        
-        # Torso subscriber
-        self.sub_torso_state = message_filters.Subscriber('/torso_controller/state', JointTrajectoryControllerState)
+        self.df_robot = pd.DataFrame(columns=['g_x', 'g_y', 'r_x', 'r_y', 'r_theta', 'r_v', 'r_omega'])
+        self.people_dict = dict()      
         
         # Base subscriber
         self.sub_odom = message_filters.Subscriber('/mobile_base_controller/odom', Odometry)
@@ -84,9 +78,7 @@ class DataHandler():
         self.sub_person_pos = message_filters.Subscriber('/people_tracker/people', People)
         
         # Init synchronizer and assigning a callback 
-        self.ats = message_filters.ApproximateTimeSynchronizer([self.sub_head_state, 
-                                                                self.sub_torso_state, 
-                                                                self.sub_odom, 
+        self.ats = message_filters.ApproximateTimeSynchronizer([self.sub_odom, 
                                                                 self.sub_robot_pos, 
                                                                 self.sub_person_pos], 
                                                                 queue_size = 100, slop = 1,
@@ -120,41 +112,31 @@ class DataHandler():
                                                        "h_theta": theta}
                 
                 
-    def cb_handle_data(self, head_state: JointTrajectoryControllerState, 
-                             torso_state: JointTrajectoryControllerState, 
-                             robot_odom: Odometry, 
+    def cb_handle_data(self, robot_odom: Odometry, 
                              robot_pose: PoseWithCovarianceStamped,
                              people: People):
         """
         Synchronized callback
 
         Args:
-            head_state (JointTrajectoryControllerState): robot head state
-            torso_state (JointTrajectoryControllerState): robot torso state
             robot_odom (Odometry): robot odometry
             robot_pose (PoseWithCovarianceStamped): robot pose
             people (People): tracked people
         """
 
+        timestep = robot_odom.header.stamp
+        
         # Robot 2D pose (x, y, theta)
         r_x, r_y, r_theta = get_2DPose(robot_pose)
-        
-        # Head motors 1 & 2 velocities
-        head1_vel = head_state.actual.velocities[0]
-        head2_vel = head_state.actual.velocities[1]
-        
-        # Torso velocity
-        torso_vel = torso_state.actual.velocities[0] + random.uniform(a=-0.02, b=0.02)
-        
+                
         # Base linear & angular velocity
         base_vel = robot_odom.twist.twist.linear.x
         base_ang_vel = robot_odom.twist.twist.angular.z
               
         # appending new data row in robot Dataframe
-        self.df_robot.loc[len(self.df_robot)] = {'g_x': GOAL[0], 'g_y': GOAL[1],
+        self.df_robot.loc[len(self.df_robot)] = {'time': timestep,
+                                                 'g_x': GOAL[0], 'g_y': GOAL[1],
                                                  'r_x': r_x, 'r_y': r_y, 'r_theta': r_theta,
-                                                 'r_v_h1': head1_vel, 'r_v_h2': head2_vel, 
-                                                 'r_v_t': torso_vel, 
                                                  'r_v': base_vel, 'r_omega': base_ang_vel,
                                                  }
         

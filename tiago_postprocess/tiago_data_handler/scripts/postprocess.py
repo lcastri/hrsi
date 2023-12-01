@@ -80,6 +80,7 @@ def fill_missings(df: pd.DataFrame, mode : fNaN_Mode = fNaN_Mode.Constant):
         
     return df
 
+
 def get_risk(r_old_pos: tuple, h_old_pos: tuple, r_pos: tuple, h_pos: tuple, r_old_vel: float):
     """
     Postprocesses the data and extracts the risk between robot and human
@@ -145,6 +146,38 @@ def get_risk(r_old_pos: tuple, h_old_pos: tuple, r_pos: tuple, h_pos: tuple, r_o
     return math.exp(risk)
 
 
+def wrapTo2Pi(angle):
+    return angle % (2 * math.pi)
+
+
+def get_thetarh(r_old_pos: tuple, h_old_pos: tuple, r_pos: tuple, h_pos: tuple, dt):
+    """
+    Postprocesses the data and extracts the risk between robot and human
+
+    Args:
+        r_old_pos (tuple): t-1 x & y robot position
+        h_old_pos (tuple): t-1 x & y human position
+        r_pos (tuple): t x & y robot position
+        h_pos (tuple): t x & y human position
+
+    Returns:
+        float: risk
+    """
+    
+    x_disp = (h_pos[0] - h_old_pos[0])/ dt
+    y_disp = (h_pos[1] - h_old_pos[1])/ dt
+
+    obs_x_disp = (r_pos[0] - r_old_pos[0])/ dt
+    obs_y_disp = (r_pos[1] - r_old_pos[1])/ dt
+
+    v = np.array([x_disp, y_disp])
+    obs_v = np.array([obs_x_disp, obs_y_disp])
+
+    cross_prod = obs_v(1)*v(2) - obs_v(2)*v(1)
+    return wrapTo2Pi(math.atan2(cross_prod, np.dot(obs_v, v)))
+    
+
+
 def postprocess(df: pd.DataFrame):
     """
     Adds distance human-robot, risk, angle robot-goal, angle robot-human to the dataframe
@@ -156,13 +189,12 @@ def postprocess(df: pd.DataFrame):
         DataFrame: completed dataframe
     """
     
-    df_new = pd.DataFrame(columns=["d_rg", "t_rg", "d_rh", "risk", "theta_rg", "theta_rh"])
-    df_new.loc[0] =  {"d_rg": math.dist([df["r_x"][0], df["r_y"][0]], [df["g_x"][0], df["g_y"][0]]),
-                      "t_rg": random.uniform(a=-0.05, b=0.05),
+    df_new = pd.DataFrame(columns=[r"theta_{rh}", r"d_{rg}", r"d_{rh}", "risk"])
+    df_new.loc[0] =  {
+                      "theta_rh": 0, 
+                      "d_rg": math.dist([df["r_x"][0], df["r_y"][0]], [df["g_x"][0], df["g_y"][0]]),
                       "d_rh": math.dist([df["r_x"][0], df["r_y"][0]], [df["h_x"][0], df["h_y"][0]]),
                       "risk": random.uniform(a=-0.03, b=0.06),
-                      "theta_rg": math.atan2(df["g_y"][0] - df["r_y"][0], df["g_x"][0] - df["r_x"][0]),
-                      "theta_rh": math.atan2(df["h_y"][0] - df["r_y"][0], df["h_x"][0] - df["r_x"][0]), 
                      }
     for t in range(1, len(df)):
         r_old_pos = (df["r_x"][t-1], df["r_y"][t-1])
@@ -170,27 +202,20 @@ def postprocess(df: pd.DataFrame):
         r_old_vel = df["r_v"][t-1]
         r_pos = (df["r_x"][t], df["r_y"][t])
         h_pos = (df["h_x"][t], df["h_y"][t])
+        dt = (df["time"][t], df["time"][t-1])
         try:
             risk = get_risk(r_old_pos, h_old_pos, r_pos, h_pos, r_old_vel)
+            theta_rh = get_thetarh(r_old_pos, h_old_pos, r_pos, h_pos, dt)
         except:
             risk = 0
-
-        df_new.loc[t] = {"d_rg": math.dist([df["r_x"][t], df["r_y"][t]], [df["g_x"][t], df["g_y"][t]]), 
-                         "t_rg": df_new["d_rg"][t-1]/(df["r_v"][t-1] + 0.1) + random.uniform(a=-0.05, b=0.05),
-                         "d_rh": math.dist([df["r_x"][t], df["r_y"][t]], [df["h_x"][t], df["h_y"][t]]),
-                         "risk": risk + random.uniform(a=-0.03, b=0.06),
-                         "theta_rg": math.atan2(df["g_y"][t] - df["r_y"][t], df["g_x"][t] - df["r_x"][t]),
-                         "theta_rh": math.atan2(df["h_y"][t] - df["r_y"][t], df["h_x"][t] - df["r_x"][t]), 
-                         }
-        #########################################################################################FIXME: new version with only lagged dependency
-        # df_new.loc[t] = {"d_rh": math.dist([df["r_x"][t-1], df["r_y"][t-1]], [df["h_x"][t-1], df["h_y"][t-1]]),
-        #                  "risk": risk,
-        #                  "theta_rg": math.atan2(df["g_y"][t-1] - df["r_y"][t-1], df["g_x"][t-1] - df["r_x"][t-1]),
-        #                  "theta_rh": math.atan2(df["h_y"][t-1] - df["r_y"][t-1], df["h_x"][t-1] - df["r_x"][t-1]), 
-        #                  }
-        #######################################################################################################################################
-
-                      
+            
+        df_new.loc[0] =  {
+                      "theta_rh": theta_rh, 
+                      "d_rg": math.dist([df["r_x"][t], df["r_y"][t]], [df["g_x"][t], df["g_y"][t]]),
+                      "d_rh": math.dist([df["r_x"][t], df["r_y"][t]], [df["h_x"][t], df["h_y"][t]]),
+                      "risk": risk + random.uniform(a=-0.03, b=0.06),
+                     }
+       
     df_complete = pd.concat([df, df_new], axis = 1)
     return df_complete
 
@@ -200,32 +225,18 @@ if __name__ == '__main__':
     DATA_PATH = r'/home/lucacastri/Git/tiago_ws/src/hrsi/tiago_postprocess/tiago_postprocess_bringup/data'
     NUM_DATASET = 16
     ACTOR = "greta"
-    # INTERVENTION = "noaction"
-    INTERVENTION = "decrease"
+    INTERVENTION = "noaction"
+    # INTERVENTION = "decrease"
     # INTERVENTION = "increase"
     FILE_EXT = ".csv"
     
     for i in range(NUM_DATASET):
         df_filepath = DATA_PATH + "/" + ACTOR + "_" + INTERVENTION + "_" + str(i)
         df_raw = pd.read_csv(df_filepath + "_raw" + FILE_EXT, index_col=0)
-        
-        # Raw DataFrame filled with constant values
-        # df_raw_constant = fill_missings(df_raw, mode = fNaN_Mode.Constant)
-        # df_raw_constant.to_csv(df_filepath + "_raw_constant.csv")
-        
+               
         # Raw DataFrame filled with interpolated values
         df_raw_inter = fill_missings(df_raw, mode = fNaN_Mode.Interpolation)
-        df_raw_inter.to_csv(df_filepath + "_raw_inter.csv")
         
         # Postprocess
         df_final = postprocess(df_raw_inter)
-        df_final.to_csv(df_filepath + "_causal.csv", columns=['r_v_h1', 'r_v_h2', 'r_v_t', 'r_v', 'r_theta',
-                                                              'd_rg', 't_rg', 'theta_rg',
-                                                              'h_v', 'h_theta', 
-                                                              'risk', 'd_rh', 'theta_rh'])
-        df_final.to_csv(df_filepath+ "_causal_notheta.csv", columns=['r_v_h1', 'r_v_h2', 'r_v_t', 'r_v',
-                                                                     'd_rg', 't_rg',
-                                                                     'h_v', 
-                                                                     'risk', 'd_rh'])
-        df_final.to_csv(df_filepath + "_causal_reduced.csv", columns=['r_v_h1', 'r_v_h2', 'r_v_t', 'r_v',
-                                                                      'd_rg', 'h_v', 'risk', 'd_rh'])
+        df_final.to_csv(df_filepath + "_causal.csv", columns=[r"theta_{rh}", r"d_{rg}", r"d_{rh}", "risk", 'r_v', 'h_v'])
